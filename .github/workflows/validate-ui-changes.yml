@@ -1,0 +1,108 @@
+name: Validate UI contributions
+
+# Temporary fork-only validation. This does not publish releases or submit PRs.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BASE_COMMIT: 35a042fd1f23bf940b7b0aa17111558679d48ff1
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+
+jobs:
+  test:
+    name: Test (${{ matrix.variant }})
+    if: github.event.repository.private == false
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        variant: [baseline, tree, panel]
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Get validation files from this fork
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          path: validation-input
+          persist-credentials: false
+
+      - name: Get the same clean upstream revision for every variant
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: mRemoteNG/mRemoteNG
+          ref: ${{ env.BASE_COMMIT }}
+          path: source
+          persist-credentials: false
+
+      - name: Install .NET 10 SDK
+        id: dotnet
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Set up Visual Studio MSBuild
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3
+        with:
+          msbuild-architecture: x64
+
+      - name: Build the app and run the complete test assembly
+        env:
+          VALIDATION_VARIANT: ${{ matrix.variant }}
+          SDK_VERSION: ${{ steps.dotnet.outputs.dotnet-version }}
+        run: |
+          & ./validation-input/.github/validation/Run-Validation.ps1 `
+            -SourceRoot "$env:GITHUB_WORKSPACE/source" `
+            -ResultsRoot "$env:GITHUB_WORKSPACE/results" `
+            -Variant $env:VALIDATION_VARIANT `
+            -SdkVersion $env:SDK_VERSION
+
+      - name: Save logs and test results even when the build or tests fail
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: validation-${{ matrix.variant }}
+          path: results/
+          if-no-files-found: warn
+          retention-days: 14
+
+  report:
+    name: Compare results
+    if: always() && github.event.repository.private == false
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Get the report script
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Download all three result sets
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: validation-*
+          path: downloaded-results
+
+      - name: Compare with baseline and write the run summary
+        if: always()
+        shell: pwsh
+        run: |
+          & ./.github/validation/Compare-Results.ps1 `
+            -ArtifactsRoot "$env:GITHUB_WORKSPACE/downloaded-results" `
+            -OutputRoot "$env:GITHUB_WORKSPACE/comparison"
+
+      - name: Save the comparison
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: validation-comparison
+          path: comparison/
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,38 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 644048b..023058e 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
+ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+ ## [1.78.2]
+ ### Fixed
++- fixed connection-tree guide lines using hard-coded blue instead of the active theme border color
+ - #3178: fixed "Reconnect to previously opened sessions on startup" being turned off by the "Automatically try to reconnect when disconnected from server" option, and for good after one start with /noreconnect
+ - fixed the AllowExportUsernames and AllowExportPasswords registry settings not being enforced in the export dialog and CSV export, including VNC proxy and RD Gateway credentials
+ - #3247: fixed the rename box in the connection tree being shifted and showing the old name behind it
+diff --git a/mRemoteNG/UI/Controls/ConnectionTree/ConnectionTree.cs b/mRemoteNG/UI/Controls/ConnectionTree/ConnectionTree.cs
+index 45ddad7..46d5210 100644
+--- a/mRemoteNG/UI/Controls/ConnectionTree/ConnectionTree.cs
++++ b/mRemoteNG/UI/Controls/ConnectionTree/ConnectionTree.cs
+@@ -3,6 +3,7 @@ using System.Collections.Generic;
+ using System.Collections.Specialized;
+ using System.ComponentModel;
+ using System.Diagnostics;
++using System.Drawing;
+ using System.Linq;
+ using System.Windows.Forms;
+ using BrightIdeasSoftware;
+@@ -113,6 +114,13 @@ namespace mRemoteNG.UI.Controls.ConnectionTree
+ 
+         private void ApplyTheme()
+         {
++            // Use the active theme's neutral border, retaining the existing dotted guides.
++            // The renderer owns a mutable pen; update it instead of allocating on each theme change.
++            TreeColumnRenderer.LinePen.Color = _themeManager.ActiveAndExtended
++                ? _themeManager.ActiveTheme.ExtendedPalette.getColor("TextBox_Border")
++                : SystemColors.ControlDark;
++            Invalidate();
++
+             if (!_themeManager.ActiveAndExtended)
+                 return;
+ 
