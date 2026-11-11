@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using BrightIdeasSoftware;
@@ -113,6 +114,13 @@ namespace mRemoteNG.UI.Controls.ConnectionTree
 
         private void ApplyTheme()
         {
+            // Use the active theme's neutral border, retaining the existing dotted guides.
+            // The renderer owns a mutable pen; update it instead of allocating on each theme change.
+            TreeColumnRenderer.LinePen.Color = _themeManager.ActiveAndExtended
+                ? _themeManager.ActiveTheme.ExtendedPalette.getColor("TextBox_Border")
+                : SystemColors.ControlDark;
+            Invalidate();
+
             if (!_themeManager.ActiveAndExtended)
                 return;
 
