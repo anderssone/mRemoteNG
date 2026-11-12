@@ -11,6 +11,7 @@ $lines = [Collections.Generic.List[string]]::new()
 $lines.Add('# UI contribution validation')
 $lines.Add('')
 $lines.Add('All runs use the same pinned upstream revision. Existing failures remain failures; comparison does not waive the test checklist.')
+$lines.Add('Repeated display names are compared as groups: every result is retained, and group counts and outcomes must be reviewed together. TRX does not always distinguish individual custom-named NUnit cases.')
 $lines.Add('')
 $lines.Add('| Variant | Build/run | Total | Passed | Failed | Other / unexecuted |')
 $lines.Add('| --- | --- | ---: | ---: | ---: | ---: |')
@@ -19,7 +20,7 @@ foreach ($variant in @('baseline', 'tree', 'panel')) {
     $folder = Join-Path $ArtifactsRoot "validation-$variant"
     $row = [ordered]@{
         variant = $variant; status = 'INCOMPLETE'; total = 0; passed = 0; failed = 0; other = 0
-        tests = @(); issues = @(); record = $null
+        tests = @(); issues = @(); record = $null; repeatedNameGroups = 0
     }
     try {
         $row.record = Get-Content (Join-Path $folder 'result.json') -Raw | ConvertFrom-Json
@@ -43,15 +44,17 @@ foreach ($variant in @('baseline', 'tree', 'panel')) {
             $method = $definition.SelectSingleNode('t:TestMethod', $ns)
             $definitions[$definition.id] = "$($method.className)|$($method.name)"
         }
-        $seen = @{}
+        $nameCounts = @{}
         $row.tests = @(foreach ($test in $trx.SelectNodes('/t:TestRun/t:Results/t:UnitTestResult', $ns)) {
             if (-not $definitions.ContainsKey($test.testId)) { throw 'TRX has an unknown test definition.' }
-            # Test IDs change between runs. Compare class, method and case name instead.
+            # NUnit SetName can reuse a name across methods and data cases. Keep
+            # every result; compare repeated names by multiplicity and outcomes.
+            # Execution order and generated IDs are not cross-run identities.
             $key = "$($definitions[$test.testId])|$($test.testName)"
-            if ($seen.ContainsKey($key)) { throw "Duplicate test identity in TRX: $key" }
-            $seen[$key] = $true
+            $nameCounts[$key] = 1 + [int] $nameCounts[$key]
             [pscustomobject]@{ key = $key; outcome = [string] $test.outcome }
         })
+        $row.repeatedNameGroups = @($nameCounts.Values | Where-Object { $_ -gt 1 }).Count
         if ($row.tests.Count -ne $row.total -or $row.total -lt 1) {
             throw 'TRX result count is empty or inconsistent with its counters.'
         }
@@ -84,6 +87,23 @@ foreach ($variant in @('baseline', 'tree', 'panel')) {
 }
 
 $baseline = $rows | Where-Object variant -eq 'baseline'
+
+function Get-OutcomeGroups {
+    param([object[]] $Tests)
+    $groups = @{}
+    foreach ($test in $Tests) {
+        if (-not $groups.ContainsKey($test.key)) {
+            $groups[$test.key] = @{ total = 0; passed = 0; failed = 0; outcomes = @{} }
+        }
+        $group = $groups[$test.key]
+        $group.total++
+        if ($test.outcome -eq 'Passed') { $group.passed++ }
+        if ($test.outcome -eq 'Failed') { $group.failed++ }
+        $group.outcomes[$test.outcome] = 1 + [int] $group.outcomes[$test.outcome]
+    }
+    return $groups
+}
+
 $comparisons = @()
 foreach ($candidate in @($rows | Where-Object variant -ne 'baseline')) {
     $lines.Add('')
@@ -101,14 +121,34 @@ foreach ($candidate in @($rows | Where-Object variant -ne 'baseline')) {
         }
         if ($sameEnvironment) {
             $comparison.comparable = $true
-            $old = @{}; $new = @{}
-            foreach ($test in $baseline.tests) { $old[$test.key] = $test.outcome }
-            foreach ($test in $candidate.tests) { $new[$test.key] = $test.outcome }
-            $comparison.newlyFailing = @($new.Keys | Where-Object { $new[$_] -eq 'Failed' -and $old[$_] -ne 'Failed' } | Sort-Object)
-            $comparison.newlyNotPassing = @($new.Keys | Where-Object { $old[$_] -eq 'Passed' -and $new[$_] -ne 'Passed' } | Sort-Object)
-            $comparison.missing = @($old.Keys | Where-Object { -not $new.ContainsKey($_) } | Sort-Object)
-            $comparison.added = @($new.Keys | Where-Object { -not $old.ContainsKey($_) } | Sort-Object)
-            $comparison.resolvedFailures = @($old.Keys | Where-Object { $old[$_] -eq 'Failed' -and $new[$_] -eq 'Passed' } | Sort-Object)
+            $old = Get-OutcomeGroups $baseline.tests
+            $new = Get-OutcomeGroups $candidate.tests
+            $allKeys = @(@($old.Keys) + @($new.Keys) | Sort-Object -Unique)
+            foreach ($key in $allKeys) {
+                $before = $old[$key]
+                $after = $new[$key]
+                $oldTotal = [int] $before.total
+                $newTotal = [int] $after.total
+                $oldFailed = [int] $before.failed
+                $newFailed = [int] $after.failed
+                $oldPassed = [int] $before.passed
+                $newPassed = [int] $after.passed
+                if ($newFailed -gt $oldFailed) {
+                    $comparison.newlyFailing += "$key (failed: $oldFailed -> $newFailed)"
+                }
+                if ($oldPassed -gt $newPassed) {
+                    $comparison.newlyNotPassing += "$key (passed: $oldPassed -> $newPassed)"
+                }
+                if ($oldTotal -gt $newTotal) {
+                    $comparison.missing += "$key (results: $oldTotal -> $newTotal)"
+                }
+                if ($newTotal -gt $oldTotal) {
+                    $comparison.added += "$key (results: $oldTotal -> $newTotal)"
+                }
+                if ($oldFailed -gt $newFailed -and $newPassed -gt $oldPassed) {
+                    $comparison.resolvedFailures += "$key (failed: $oldFailed -> $newFailed)"
+                }
+            }
             foreach ($field in @('newlyFailing', 'newlyNotPassing', 'missing', 'added', 'resolvedFailures')) {
                 $lines.Add("${field}: $($comparison[$field].Count)")
                 foreach ($key in $comparison[$field]) { $lines.Add("- $key") }
@@ -129,7 +169,7 @@ foreach ($candidate in @($rows | Where-Object variant -ne 'baseline')) {
 
 for ($index = 0; $index -lt $rows.Count; $index++) {
     $row = $rows[$index]
-    $lines.Insert(6 + $index, "| $($row.variant) | $($row.status) | $($row.total) | $($row.passed) | $($row.failed) | $($row.other) |")
+    $lines.Insert(7 + $index, "| $($row.variant) | $($row.status) | $($row.total) | $($row.passed) | $($row.failed) | $($row.other) |")
 }
 
 $lines.Add('')
@@ -137,6 +177,7 @@ $lines.Add('## Evidence and remaining checks')
 foreach ($row in $rows) {
     $lines.Add('')
     $lines.Add("$($row.variant): final status **$($row.status)**")
+    $lines.Add("- Repeated-name groups: $($row.repeatedNameGroups); every result occurrence is counted.")
     if ($row.record) {
         $lines.Add("- Upstream: $($row.record.baseCommit); SDK: $($row.record.sdkVersion); image: $($row.record.runnerImage)")
         $lines.Add("- Validation commit: $($row.record.workflowCommit); patch SHA-256: $($row.record.patchSha256)")
