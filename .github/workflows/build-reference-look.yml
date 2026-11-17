@@ -1,0 +1,116 @@
+name: Build reference-look preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BASE_COMMIT: 059464f050124e497c9103c255dce0560537106a
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+
+jobs:
+  validate:
+    name: Build and test (${{ matrix.variant }})
+    if: github.event.repository.private == false
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [baseline, appearance]
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Get the validation kit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          path: kit
+          persist-credentials: false
+      - name: Get the current clean upstream base
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: mRemoteNG/mRemoteNG
+          ref: ${{ env.BASE_COMMIT }}
+          path: source
+          persist-credentials: false
+      - name: Set up the upstream .NET 11 SDK
+        id: dotnet
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: '11.0.x'
+      - name: Set up Visual Studio MSBuild
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3
+        with:
+          msbuild-architecture: x64
+      - name: Build the real app and run the full functional test assembly
+        env:
+          PREVIEW_VARIANT: ${{ matrix.variant }}
+          SDK_VERSION: ${{ steps.dotnet.outputs.dotnet-version }}
+        run: |
+          & ./kit/.github/reference-look/Build.ps1 `
+            -SourceRoot "$env:GITHUB_WORKSPACE/source" `
+            -ResultsRoot "$env:GITHUB_WORKSPACE/results" `
+            -Variant $env:PREVIEW_VARIANT -SdkVersion $env:SDK_VERSION
+      - name: Publish portable app and capture real Windows UI
+        if: matrix.variant == 'appearance'
+        run: |
+          & ./kit/.github/reference-look/Publish-Preview.ps1 `
+            -SourceRoot "$env:GITHUB_WORKSPACE/source" `
+            -PublishRoot "$env:GITHUB_WORKSPACE/portable-preview" `
+            -ScreenshotsRoot "$env:GITHUB_WORKSPACE/screenshots"
+      - name: Save build logs and full test results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: validation-${{ matrix.variant }}
+          path: results/
+          retention-days: 7
+      - name: Save real-app screenshots and their scope
+        if: always() && matrix.variant == 'appearance'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: reference-look-screenshots
+          path: screenshots/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Save the portable self-contained test app
+        if: always() && matrix.variant == 'appearance' && env.PORTABLE_PREVIEW_READY == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: portable-reference-look
+          path: portable-preview/
+          retention-days: 3
+
+  compare:
+    name: Compare full test results
+    if: always() && github.event.repository.private == false
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get comparison script
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Get baseline and appearance results
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: validation-*
+          path: results
+      - name: Compare with the clean current upstream run
+        if: always()
+        shell: pwsh
+        run: |
+          & ./.github/reference-look/Compare-Results.ps1 `
+            -ArtifactsRoot "$env:GITHUB_WORKSPACE/results" `
+            -OutputRoot "$env:GITHUB_WORKSPACE/comparison"
+      - name: Save the comparison report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: reference-look-comparison
+          path: comparison/
+          retention-days: 7
