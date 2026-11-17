@@ -2,7 +2,9 @@
 param(
     [Parameter(Mandatory)][string] $SourceRoot,
     [Parameter(Mandatory)][string] $PublishRoot,
-    [Parameter(Mandatory)][string] $ScreenshotsRoot
+    [Parameter(Mandatory)][string] $ScreenshotsRoot,
+    [switch] $UseExistingPortable,
+    [string] $ValidatedResultsRoot
 )
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
@@ -18,7 +20,8 @@ $env:DOTNET_ROOT = $dotnetRoot
 $env:DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR = $dotnetRoot
 $env:MSBuildSDKsPath = Join-Path $dotnetRoot "sdk/$sdk/Sdks"
 $results = Join-Path $env:GITHUB_WORKSPACE 'results'
-$previewRecord = [ordered]@{ completed = $false; portablePublished = $false; screenshots = @(); stage = 'publish'; error = $null }
+New-Item -ItemType Directory -Force -Path $results | Out-Null
+$previewRecord = [ordered]@{ completed = $false; portablePublished = $false; screenshots = @(); stage = 'publish'; error = $null; sourceMode = $(if ($UseExistingPortable) {'validated-artifact'} else {'rebuilt'}); sourceRun = $null }
 
 function Invoke-Checked {
     param([string] $Program, [string[]] $Arguments, [string] $Log)
@@ -28,12 +31,37 @@ function Invoke-Checked {
 
 Push-Location $SourceRoot
 try {
-    # Upstream's Release Self-Contained Build target publishes and cleans its own
-    # intermediate output. Calling Publish directly would invoke that twice.
-    Invoke-Checked $msbuild @('mRemoteNG/mRemoteNG.csproj','/restore','/t:Build',
-        '/p:Configuration=Release Self-Contained','/p:Platform=x64','/p:RuntimeIdentifier=win-x64',
-        '/p:SelfContained=true','/p:PublishReadyToRun=false','/p:MSBuildEnableWorkloadResolver=false',
-        "/p:PublishDir=$PublishRoot/",'/verbosity:minimal','/nologo') (Join-Path $results 'portable-publish.log')
+    if ($UseExistingPortable) {
+        if (!$ValidatedResultsRoot -or !$env:PREVIEW_SOURCE_RUN -or !$env:PREVIEW_SOURCE_COMMIT -or !$env:PREVIEW_PATCH_SHA256) {
+            throw 'Reusing an artifact requires its pinned source run, commit, patch and validation results.'
+        }
+        $prior = Get-Content (Join-Path $ValidatedResultsRoot 'result.json') -Raw | ConvertFrom-Json
+        $expectedRun = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:PREVIEW_SOURCE_RUN"
+        if (!$prior.completed -or $prior.testExitCode -ne 0 -or $prior.variant -ne 'appearance' -or
+            $prior.workflowRun -ne $expectedRun -or $prior.workflowCommit -ne $env:PREVIEW_SOURCE_COMMIT -or
+            $prior.patchSha256 -ne $env:PREVIEW_PATCH_SHA256 -or $prior.sdkVersion -ne $sdk) {
+            throw 'The downloaded artifact does not match the pinned passing source run.'
+        }
+        [xml] $trx = Get-Content (Join-Path $ValidatedResultsRoot 'trx/tests.trx') -Raw
+        $ns = [Xml.XmlNamespaceManager]::new($trx.NameTable)
+        $ns.AddNamespace('t', 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010')
+        $summary = $trx.SelectSingleNode('/t:TestRun/t:ResultSummary', $ns)
+        $counters = $summary.SelectSingleNode('t:Counters', $ns)
+        $tests = @($trx.SelectNodes('/t:TestRun/t:Results/t:UnitTestResult', $ns))
+        if ($summary.outcome -ne 'Completed' -or [int]$counters.total -ne 2928 -or
+            [int]$counters.passed -ne 2928 -or [int]$counters.executed -ne 2928 -or
+            $tests.Count -ne 2928 -or @($tests | Where-Object outcome -ne 'Passed').Count -ne 0) {
+            throw 'The pinned appearance artifact must have all 2928 tests passing.'
+        }
+        $previewRecord.sourceRun = $expectedRun
+        Copy-Item -LiteralPath (Join-Path $ValidatedResultsRoot 'result.json') -Destination (Join-Path $results 'source-validation.json')
+    } else {
+        # Upstream's Build target publishes and cleans its own intermediates.
+        Invoke-Checked $msbuild @('mRemoteNG/mRemoteNG.csproj','/restore','/t:Build',
+            '/p:Configuration=Release Self-Contained','/p:Platform=x64','/p:RuntimeIdentifier=win-x64',
+            '/p:SelfContained=true','/p:PublishReadyToRun=false','/p:MSBuildEnableWorkloadResolver=false',
+            "/p:PublishDir=$PublishRoot/",'/verbosity:minimal','/nologo') (Join-Path $results 'portable-publish.log')
+    }
     foreach ($required in @('mRemoteNG.exe','mRemoteNG.dll','Themes/Catppuccin Mocha Fluent.vstheme','Icons/mRemoteNG.ico')) {
         if (-not (Test-Path -LiteralPath (Join-Path $PublishRoot $required))) { throw "Portable output is missing $required" }
     }

@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using mRemoteNG.App;
 using mRemoteNG.Config.Serializers.ConnectionSerializers.Xml;
 using mRemoteNG.Connection;
@@ -39,9 +40,11 @@ internal static class Program
     private static int Main(string[] args)
     {
         // This utility must never load a person's normal app configuration or connections.
-        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true")
+        bool localFixture = args.Contains("--isolated-local-test")
+            && File.Exists(Path.Combine(AppContext.BaseDirectory, ".appearance-preview-isolated"));
+        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true" && !localFixture)
         {
-            Console.Error.WriteLine("This screenshot helper runs only on disposable GitHub Actions runners.");
+            Console.Error.WriteLine("Use a disposable GitHub runner or an explicitly marked isolated local fixture.");
             return 2;
         }
         AppDomain.CurrentDomain.AssemblyResolve += (_, request) =>
@@ -62,7 +65,10 @@ internal static class Program
     {
         try
         {
+            if (typeof(ProgramRoot).GetProperty("IsPortableBuild", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null) is not true)
+                throw new InvalidOperationException("The screenshot helper requires a portable app build.");
             _output = Path.GetFullPath(args[0]); Directory.CreateDirectory(_output);
+            ConfigureFixtureLogging();
             if (args.Contains("--light")) _theme = "vs2015Light";
             _disabled = args.Contains("--disabled");
             if (_disabled) _theme = "vs2015Light";
@@ -81,20 +87,72 @@ internal static class Program
             Set("OptionsUpdatesPage", "CheckForUpdatesOnStartup", false);
             Set("OptionsBackupPage", "SaveConsOnExit", false);
             Set("OptionsBackupPage", "SaveConnectionsAfterEveryEdit", false);
+            Set("OptionsNotificationsPage", "LogToApplicationDirectory", true);
+            Set("OptionsNotificationsPage", "LogToSyslog", false);
 
             Set("App", "FirstStart", true);
             Set("App", "DoUpgrade", false);
             Set("OptionsBackupPage", "LoadConsFromCustomLocation", false);
             Set("OptionsConnectionsPage", "ConnectionFilePath", "");
-            using System.Windows.Forms.Timer timer = new() { Interval = 600 };
-            timer.Tick += (_, _) => Tick(timer);
-            timer.Start();
-            ProgramRoot.Main(new[] { "--skip-runtime-checks", "/noreconnect" });
+            System.Windows.Forms.Timer? timer = null;
+            using CancellationTokenSource stop = new();
+            // Starting a WinForms timer creates a native window. Wait for the app
+            // to initialize its exception mode and show its own main window first.
+            Thread observer = new(() => AttachWhenReady(stop.Token, () =>
+            {
+                if (stop.IsCancellationRequested) return;
+                timer = new System.Windows.Forms.Timer { Interval = 600 };
+                timer.Tick += (_, _) => Tick(timer);
+                timer.Start();
+            })) { IsBackground = true };
+            observer.Start();
+            try { ProgramRoot.Main(new[] { "--skip-runtime-checks", "/noreconnect" }); }
+            finally { stop.Cancel(); observer.Join(1500); timer?.Dispose(); }
             if (_failure != null) throw _failure;
             if (!_finished) throw new InvalidOperationException("The real app closed before the screenshots completed.");
             return 0;
         }
         catch (Exception error) { Console.Error.WriteLine(error); if (_output.Length > 0) File.WriteAllText(Path.Combine(_output, "preview-error.txt"), error.ToString()); return 1; }
+    }
+
+    private static void ConfigureFixtureLogging()
+    {
+        // The shipped log4net file initially targets APPDATA, even in a portable
+        // build. Keep every logger in this disposable app directory instead.
+        string path = Path.Combine(AppContext.BaseDirectory, "log4net.config");
+        XElement config = XElement.Load(path);
+        foreach (XElement file in config.Descendants("file"))
+            file.SetAttributeValue("value", Path.Combine(AppContext.BaseDirectory, "appearance-preview.log"));
+        config.Save(path);
+        new XDocument(new XElement("configuration",
+            new XElement("configSections", new XElement("section", new XAttribute("name", "log4net"),
+                new XAttribute("type", "log4net.Config.Log4NetConfigurationSectionHandler, log4net"))),
+            new XElement("log4net", new XElement("root", new XElement("level", new XAttribute("value", "OFF"))))))
+            .Save(Path.Combine(AppContext.BaseDirectory, "AppearancePreview.dll.config"));
+    }
+
+    private static void AttachWhenReady(CancellationToken stop, Action attach)
+    {
+        while (!stop.IsCancellationRequested)
+        {
+            try
+            {
+                FrmMain? form = Application.OpenForms.OfType<FrmMain>().FirstOrDefault();
+                if (form != null && form.IsHandleCreated && form.Visible && !form.IsDisposed)
+                {
+                    form.BeginInvoke(attach);
+                    return;
+                }
+            }
+            catch (InvalidOperationException) { /* The forms collection/handle can change during startup. */ }
+            if (Elapsed.Elapsed > TimeSpan.FromSeconds(75))
+            {
+                _failure = new TimeoutException("The real app did not show its main window.");
+                Console.Error.WriteLine(_failure);
+                return;
+            }
+            Thread.Sleep(100);
+        }
     }
 
     private static void Set(string page, string key, object value)
@@ -119,6 +177,9 @@ internal static class Program
             {
                 RootNodeInfo? root = Runtime.ConnectionsService.ConnectionTreeModel?.RootNodes.OfType<RootNodeInfo>().FirstOrDefault();
                 if (root == null) return; // wait for the normal empty first-run file to finish loading
+                ThemeManager manager = ThemeManager.getInstance();
+                manager.ActiveTheme = manager.getTheme(_theme) ?? throw new InvalidOperationException($"Theme not found: {_theme}");
+                manager.ThemingActive = !_disabled;
                 ContainerInfo development = new() { Name = "Development" };
                 ContainerInfo production = new() { Name = "Production" };
                 ConnectionInfo selected = new() { Name = "app-demo", Hostname = "", Protocol = ProtocolType.RDP, Icon = "mRemoteNG" };
@@ -134,15 +195,18 @@ internal static class Program
                 tree.ConnectionTree.SelectedObject = selected;
                 ((ConfigWindow)Window("ConfigForm")).SelectedTreeNode = selected;
                 DockPanel dock = (DockPanel)typeof(FrmMain).GetField("pnlDock", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(form)!;
+                tree.Show(dock, DockState.DockLeft);
+                ((ConfigWindow)Window("ConfigForm")).Show(tree.Pane, DockAlignment.Bottom, 0.5);
+                dock.DockLeftPortion = 0.26;
+                tree.Activate();
                 DockContent document = new() { Text = "Connecting preview (no server)" };
-                Panel host = new() { Dock = DockStyle.Fill, BackColor = ThemeManager.getInstance().ActiveTheme.ExtendedPalette.getColor("Dialog_Background") };
+                Color back = manager.ActiveAndExtended ? manager.ActiveTheme.ExtendedPalette.getColor("Tab_Item_Background") : SystemColors.Control;
+                Color fore = manager.ActiveAndExtended ? manager.ActiveTheme.ExtendedPalette.getColor("Dialog_Foreground") : SystemColors.ControlText;
+                Panel host = new() { Dock = DockStyle.Fill, BackColor = back };
                 document.Controls.Add(host);
                 Type panelType = AppAssembly.GetType("mRemoteNG.UI.Controls.RdpConnectingPanel", true)!;
                 object panel = Activator.CreateInstance(panelType, BindingFlags.Instance | BindingFlags.NonPublic, null, new object[] { host, "Connecting..." }, null)!;
                 _connectingPreview = (Control)panel;
-                ThemeManager manager = ThemeManager.getInstance();
-                Color back = manager.ActiveAndExtended ? manager.ActiveTheme.ExtendedPalette.getColor("Tab_Item_Background") : SystemColors.Control;
-                Color fore = manager.ActiveAndExtended ? manager.ActiveTheme.ExtendedPalette.getColor("Dialog_Foreground") : SystemColors.ControlText;
                 panelType.GetMethod("ApplyColors", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(panel, new object[] { back, fore });
                 panelType.GetMethod("ShowConnecting", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(panel, null);
                 document.Show(dock, DockState.Document);
@@ -153,22 +217,30 @@ internal static class Program
             {
                 Capture(form, "01-main.png");
                 MenuStrip menu = form.Controls.Find("msMain", true).OfType<MenuStrip>().First();
+                ((ToolStripMenuItem)menu.Items[0]).DropDown.AutoClose = false;
                 ((ToolStripMenuItem)menu.Items[0]).ShowDropDown();
                 _stage++;
             }
             else if (_stage == 2)
             {
-                Capture(form, "02-file-menu.png");
                 MenuStrip menu = form.Controls.Find("msMain", true).OfType<MenuStrip>().First();
+                if (!((ToolStripMenuItem)menu.Items[0]).DropDown.Visible)
+                    throw new InvalidOperationException("The File menu is missing from the menu capture.");
+                Capture(form, "02-file-menu.png");
                 ((ToolStripMenuItem)menu.Items[0]).HideDropDown();
-                ConnectionTreeWindow tree = (ConnectionTreeWindow)Window("TreeForm"); tree.ConnectionTree.Focus();
+                ((ToolStripMenuItem)menu.Items[0]).DropDown.AutoClose = true;
+                ConnectionTreeWindow tree = (ConnectionTreeWindow)Window("TreeForm"); tree.Activate(); tree.ConnectionTree.Focus();
                 _stage++;
             }
             else
             {
+                ConnectionTreeWindow tree = (ConnectionTreeWindow)Window("TreeForm");
+                if (!tree.Visible || !tree.ConnectionTree.Visible)
+                    throw new InvalidOperationException("The connection tree is missing from the focused-tree capture.");
+                tree.Activate(); tree.ConnectionTree.Focus();
                 Capture(form, "03-tree-focus.png");
                 ThemeManager manager = ThemeManager.getInstance();
-                File.WriteAllText(Path.Combine(_output, "scope.txt"), $"Real mRemoteNG main window, native menus/tree/config and actual connecting-panel source. Theme: {_theme}; enabled: {!_disabled}. Synthetic records with empty hostnames; no RDP connection or authentication was attempted. Native RDP layering and live remote logon remain untested. DPI: {form.DeviceDpi}.\n");
+                File.WriteAllText(Path.Combine(_output, "scope.txt"), $"Real mRemoteNG main window, native menus/tree/config and actual connecting-panel source. Theme: {manager.ActiveTheme.Name}; enabled: {manager.ThemingActive}. Tree guide ARGB: {tree.ConnectionTree.TreeColumnRenderer.LinePen.Color.ToArgb():X8}. Synthetic records with empty hostnames; no RDP connection or authentication was attempted. Native RDP layering and live remote logon remain untested. DPI: {form.DeviceDpi}.\n");
                 _finished = true; timer.Stop(); form.Close();
             }
         }
@@ -177,6 +249,9 @@ internal static class Program
 
     private static void Capture(Form form, string name)
     {
+        ThemeManager manager = ThemeManager.getInstance();
+        if (manager.ThemingActive != !_disabled || manager.ActiveTheme.UseFluentIcons != (!_disabled && _theme == "Catppuccin Mocha Fluent"))
+            throw new InvalidOperationException("The actual theme state does not match the requested capture mode.");
         form.Refresh(); Application.DoEvents();
         using Bitmap image = new(form.Width, form.Height);
         using (Graphics graphics = Graphics.FromImage(image)) graphics.CopyFromScreen(form.Location, Point.Empty, form.Size);
