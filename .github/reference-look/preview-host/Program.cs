@@ -33,6 +33,8 @@ internal static class Program
     private static Exception? _failure;
     private static int _stage;
     private static bool _ticking;
+    private static bool _holdingMenuForCapture;
+    private static ToolStripDropDown? _captureMenu;
     private static Control? _connectingPreview;
     private static readonly Stopwatch Elapsed = Stopwatch.StartNew();
     private static readonly Assembly AppAssembly = typeof(ProgramRoot).Assembly;
@@ -222,20 +224,30 @@ internal static class Program
             {
                 Capture(form, "01-main.png");
                 MenuStrip menu = form.Controls.Find("msMain", true).OfType<MenuStrip>().First();
-                ((ToolStripMenuItem)menu.Items[0]).DropDown.AutoClose = false;
+                _captureMenu = ((ToolStripMenuItem)menu.Items[0]).DropDown;
+                _captureMenu.Closing += (_, closing) =>
+                {
+                    Console.WriteLine($"File menu closing: {closing.CloseReason}; capture pending: {_holdingMenuForCapture}");
+                    // The runner's desktop can change activation between timer ticks.
+                    // Hold this real popup only while its screenshot is pending.
+                    if (_holdingMenuForCapture) closing.Cancel = true;
+                };
+                _holdingMenuForCapture = true;
+                _captureMenu.AutoClose = false;
                 Console.WriteLine("Opening File menu");
                 ((ToolStripMenuItem)menu.Items[0]).ShowDropDown();
-                Console.WriteLine("File menu opened");
+                Console.WriteLine($"File menu opened; visible: {_captureMenu.Visible}; bounds: {_captureMenu.Bounds}");
                 _stage++;
             }
             else if (_stage == 2)
             {
-                MenuStrip menu = form.Controls.Find("msMain", true).OfType<MenuStrip>().First();
-                if (!((ToolStripMenuItem)menu.Items[0]).DropDown.Visible)
+                if (_captureMenu == null || !_captureMenu.Visible)
                     throw new InvalidOperationException("The File menu is missing from the menu capture.");
+                _captureMenu.Refresh();
                 Capture(form, "02-file-menu.png");
-                ((ToolStripMenuItem)menu.Items[0]).HideDropDown();
-                ((ToolStripMenuItem)menu.Items[0]).DropDown.AutoClose = true;
+                _holdingMenuForCapture = false;
+                _captureMenu.Close();
+                _captureMenu.AutoClose = true;
                 ConnectionTreeWindow tree = (ConnectionTreeWindow)Window("TreeForm"); tree.Activate(); tree.ConnectionTree.Focus();
                 _stage++;
             }
@@ -248,7 +260,7 @@ internal static class Program
                 Capture(form, "03-tree-focus.png");
                 ThemeManager manager = ThemeManager.getInstance();
                 File.WriteAllText(Path.Combine(_output, "scope.txt"), $"Real mRemoteNG main window, native menus/tree/config and actual connecting-panel source. Theme: {manager.ActiveTheme.Name}; enabled: {manager.ThemingActive}. Tree guide ARGB: {tree.ConnectionTree.TreeColumnRenderer.LinePen.Color.ToArgb():X8}. Synthetic records with empty hostnames; no RDP connection or authentication was attempted. Native RDP layering and live remote logon remain untested. DPI: {form.DeviceDpi}.\n");
-                _finished = true; timer.Stop(); form.Close();
+                _finished = true; timer.Stop(); ExitFixture(0);
             }
         }
         catch (Exception error)
@@ -256,16 +268,23 @@ internal static class Program
             _failure = error;
             Console.Error.WriteLine(error);
             File.WriteAllText(Path.Combine(_output, "preview-error.txt"), error.ToString());
-            foreach (FrmMain form in Application.OpenForms.OfType<FrmMain>().ToArray())
-                foreach (MenuStrip menu in form.Controls.Find("msMain", true).OfType<MenuStrip>())
-                    foreach (ToolStripMenuItem item in menu.Items.OfType<ToolStripMenuItem>()) item.HideDropDown();
-            Application.Exit();
+            ExitFixture(1);
         }
         finally
         {
             _ticking = false;
             if (!_finished && _failure == null) timer.Start();
         }
+    }
+
+    private static void ExitFixture(int exitCode)
+    {
+        // This process only runs in a disposable, guarded portable fixture.
+        // App shutdown can prompt about synthetic unsaved records and hang CI.
+        // Evidence is already written synchronously; retain the real result code.
+        Console.Out.Flush();
+        Console.Error.Flush();
+        Environment.Exit(exitCode);
     }
 
     private static void Capture(Form form, string name)

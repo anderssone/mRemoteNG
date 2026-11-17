@@ -56,10 +56,10 @@ try {
         $summary = $trx.SelectSingleNode('/t:TestRun/t:ResultSummary', $ns)
         $counters = $summary.SelectSingleNode('t:Counters', $ns)
         $tests = @($trx.SelectNodes('/t:TestRun/t:Results/t:UnitTestResult', $ns))
-        if ($summary.outcome -ne 'Completed' -or [int]$counters.total -ne 2928 -or
-            [int]$counters.passed -ne 2928 -or [int]$counters.executed -ne 2928 -or
-            $tests.Count -ne 2928 -or @($tests | Where-Object outcome -ne 'Passed').Count -ne 0) {
-            throw 'The pinned appearance artifact must have all 2928 tests passing.'
+        if ($summary.outcome -ne 'Completed' -or [int]$counters.total -ne 2932 -or
+            [int]$counters.passed -ne 2932 -or [int]$counters.executed -ne 2932 -or
+            $tests.Count -ne 2932 -or @($tests | Where-Object outcome -ne 'Passed').Count -ne 0) {
+            throw 'The pinned reference-look artifact must have all 2932 tests passing.'
         }
         $previewRecord.sourceRun = $expectedRun
         Copy-Item -LiteralPath (Join-Path $ValidatedResultsRoot 'result.json') -Destination (Join-Path $results 'source-validation.json')
