@@ -10770,10 +10770,10 @@ index 0000000000000000000000000000000000000000..aad0f59975ab4f88633afe3251cc7f8b
 +}
 diff --git a/mRemoteNGTests/Themes/ThemeIconsTests.cs b/mRemoteNGTests/Themes/ThemeIconsTests.cs
 new file mode 100644
-index 0000000000000000000000000000000000000000..134000c0e4b25686f011363fca17e8922fe7468a
+index 0000000000000000000000000000000000000000..bca7aeda77d2102924c96302b6795e2f6ce3ad02
 --- /dev/null
 +++ b/mRemoteNGTests/Themes/ThemeIconsTests.cs
-@@ -0,0 +1,149 @@
+@@ -0,0 +1,162 @@
 +using System;
 +using System.Drawing;
 +using System.Threading;
@@ -10863,7 +10863,15 @@ index 0000000000000000000000000000000000000000..134000c0e4b25686f011363fca17e892
 +        public void Bind_UpdatesOnThemeAndEnabledChangesAndRestoresStockResource()
 +        {
 +            using ToolStrip strip = new(); using ToolStripButton item = new(); strip.Items.Add(item);
++            _manager.ThemingActive = false;
 +            ThemeIcons.Bind(item, "Run_16x");
++            Bitmap fallback = (Bitmap)item.Image;
++            Bitmap stock = mRemoteNG.Properties.Resources.Run_16x;
++            Assert.That(fallback.Size, Is.EqualTo(stock.Size));
++            for (int y = 0; y < stock.Height; y++)
++                for (int x = 0; x < stock.Width; x++)
++                    Assert.That(fallback.GetPixel(x, y).ToArgb(), Is.EqualTo(stock.GetPixel(x, y).ToArgb()));
++            _manager.ThemingActive = true;
 +            AssertTint((Bitmap)item.Image, _manager.ActiveTheme.IconColor);
 +            item.Enabled = false;
 +            AssertTint((Bitmap)item.Image, _manager.ActiveTheme.DisabledIconColor);
@@ -10871,15 +10879,20 @@ index 0000000000000000000000000000000000000000..134000c0e4b25686f011363fca17e892
 +            ThemeInfo next = MakeTheme(); next.IconColor = Color.DarkBlue; _manager.ActiveTheme = next;
 +            AssertTint((Bitmap)item.Image, Color.DarkBlue);
 +            _manager.ThemingActive = false;
-+            Assert.That(item.Image, Is.SameAs(mRemoteNG.Properties.Resources.Run_16x));
++            // ResourceManager can deserialize a fresh bitmap on each lookup. The
++            // binding must restore its own original stock image, still usable.
++            Assert.That(item.Image, Is.SameAs(fallback));
++            Assert.That(fallback.Width, Is.EqualTo(stock.Width));
 +        }
 +
 +        [Test]
 +        public void Bind_ReplacingOrDisposingBindingDoesNotDisposeStockResource()
 +        {
-+            Bitmap stock = mRemoteNG.Properties.Resources.Copy_16x;
 +            using PictureBox picture = new();
++            _manager.ThemingActive = false;
 +            ThemeIcons.Bind(picture, "Copy_16x");
++            Image stock = picture.Image;
++            _manager.ThemingActive = true;
 +            Image first = picture.Image;
 +            ThemeIcons.Bind(picture, "Copy_16x");
 +            Assert.That(picture.Image, Is.Not.SameAs(first));
