@@ -38,11 +38,35 @@ try {
         if (-not (Test-Path -LiteralPath (Join-Path $PublishRoot $required))) { throw "Portable output is missing $required" }
     }
     $previewRecord.portablePublished = $true
+    @'
+Portable appearance preview: extract this entire artifact into a NEW writable folder.
+Run mRemoteNG.exe. Select Catppuccin Mocha Fluent in Tools > Options > Themes and
+restart once so native Windows controls start in the matching dark mode.
+This is an unsigned local test build, not a maintainer-signed release. The app was
+compiled with upstream's PORTABLE configuration; use this separate folder and an
+empty test connection list. Your installed program was not replaced.
+This artifact is retained once the app publishes successfully, even if later
+screenshot capture fails. Check the workflow and comparison report separately;
+an available download does not establish that the screenshot checks passed.
+If device policy blocks the build, keep that policy in place. Live RDP still
+needs a build permitted by your device policy. No private inventory is bundled.
+'@ | Set-Content (Join-Path $PublishRoot 'START-HERE.txt') -Encoding utf8
+    'PORTABLE_PREVIEW_READY=true' | Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8
     $previewRecord.stage = 'snapshot-host-build'
     $hostProject = Join-Path $PSScriptRoot 'preview-host/AppearancePreview.csproj'
     $hostBuild = Join-Path $env:RUNNER_TEMP 'appearance-host-build'
-    Invoke-Checked $msbuild @($hostProject,'/restore','/t:Build','/p:Configuration=Release','/p:Platform=x64',
-        '/p:MSBuildEnableWorkloadResolver=false',"/p:PreviewAppDirectory=$PublishRoot", "/p:OutputPath=$hostBuild/",'/verbosity:minimal','/nologo') (Join-Path $results 'snapshot-host-build.log')
+    # The app-local hostfxr from the portable app wins over a framework-dependent
+    # helper's global runtime search. Publish the helper self-contained too so its
+    # runtimeconfig agrees with the runtime files copied beside it.
+    Invoke-Checked $msbuild @($hostProject,'/restore','/t:Publish','/p:Configuration=Release','/p:Platform=x64',
+        '/p:SelfContained=true','/p:RuntimeIdentifier=win-x64','/p:PublishReadyToRun=false',
+        '/p:MSBuildEnableWorkloadResolver=false',"/p:PreviewAppDirectory=$PublishRoot", "/p:PublishDir=$hostBuild/",'/verbosity:minimal','/nologo') (Join-Path $results 'snapshot-host-build.log')
+    $hostConfig = Get-Content -LiteralPath (Join-Path $hostBuild 'AppearancePreview.runtimeconfig.json') -Raw | ConvertFrom-Json
+    if ($hostConfig.runtimeOptions.framework -or $hostConfig.runtimeOptions.frameworks -or
+        -not $hostConfig.runtimeOptions.includedFrameworks) { throw 'Screenshot helper must be self-contained.' }
+    foreach ($required in @('AppearancePreview.exe','AppearancePreview.dll','hostfxr.dll','hostpolicy.dll','coreclr.dll')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $hostBuild $required))) { throw "Screenshot helper runtime is missing $required" }
+    }
     foreach ($variant in @('mocha','light','theming-disabled')) {
         $previewRecord.stage = "capture-$variant"
         $hostDirectory = Join-Path $env:RUNNER_TEMP "appearance-snapshot-$variant"
@@ -67,17 +91,6 @@ try {
         if (@(Get-ChildItem -LiteralPath $variantOutput -Filter *.png).Count -ne 3) { throw "Expected three real-app snapshots for $variant." }
         $previewRecord.screenshots += $variant
     }
-    @'
-Portable appearance preview: extract this entire artifact into a NEW writable folder.
-Run mRemoteNG.exe. Select Catppuccin Mocha Fluent in Tools > Options > Themes and
-restart once so native Windows controls start in the matching dark mode.
-This is an unsigned local test build, not a maintainer-signed release. The app was
-compiled with upstream's PORTABLE configuration; use this separate folder and an
-empty test connection list. Your installed program was not replaced.
-If device policy blocks the build, keep that policy in place and use the real-app
-screenshots from the workflow to review appearance. Live RDP still needs a build
-permitted by your device policy. No private connection inventory is bundled.
-'@ | Set-Content (Join-Path $PublishRoot 'START-HERE.txt') -Encoding utf8
     $previewRecord.completed = $true
     $previewRecord.stage = 'finished'
 }
