@@ -83,7 +83,7 @@ foreach ($variant in @('baseline', 'appearance')) {
                 @{ name = 'ThemeIconsTests'; count = 14 },
                 @{ name = 'FluentThemeMetadataTests'; count = 4 },
                 @{ name = 'FluentConnectionIconTests'; count = 1 },
-                @{ name = 'FluentAppearanceTests'; count = 4 }
+                @{ name = 'FluentAppearanceTests'; count = 9 }
             )) {
                 $discovered = @($row.tests | Where-Object { $_.key -like "*$($fixture.name)|*" })
                 if ($discovered.Count -ne $fixture.count -or @($discovered | Where-Object outcome -ne 'Passed').Count -gt 0) {

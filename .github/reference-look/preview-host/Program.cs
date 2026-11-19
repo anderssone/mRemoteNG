@@ -33,7 +33,6 @@ internal static class Program
     private static Exception? _failure;
     private static int _stage;
     private static bool _ticking;
-    private static bool _holdingMenuForCapture;
     private static ToolStripDropDown? _captureMenu;
     private static Control? _connectingPreview;
     private static readonly Stopwatch Elapsed = Stopwatch.StartNew();
@@ -223,29 +222,30 @@ internal static class Program
             else if (_stage == 1)
             {
                 Capture(form, "01-main.png");
-                MenuStrip menu = form.Controls.Find("msMain", true).OfType<MenuStrip>().First();
-                _captureMenu = ((ToolStripMenuItem)menu.Items[0]).DropDown;
-                _captureMenu.Closing += (_, closing) =>
-                {
-                    Console.WriteLine($"File menu closing: {closing.CloseReason}; capture pending: {_holdingMenuForCapture}");
-                    // The runner's desktop can change activation between timer ticks.
-                    // Hold this real popup only while its screenshot is pending.
-                    if (_holdingMenuForCapture) closing.Cancel = true;
-                };
-                _holdingMenuForCapture = true;
+                // The Connections toolbar is also a MenuStrip named msMain.
+                // A recursive name search can select its New Connection button.
+                MenuStrip menu = form.MainMenuStrip ?? throw new InvalidOperationException("The main menu is missing.");
+                mRemoteNG.UI.Menu.FileMenu fileMenu = menu.Items.OfType<mRemoteNG.UI.Menu.FileMenu>().Single();
+                if (fileMenu.Name != "mMenFile" || fileMenu.Owner != menu || !fileMenu.HasDropDownItems ||
+                    !menu.Visible || !fileMenu.Available || !fileMenu.Enabled)
+                    throw new InvalidOperationException("The real main File menu is not available for capture.");
+                _captureMenu = fileMenu.DropDown;
                 _captureMenu.AutoClose = false;
-                Console.WriteLine("Opening File menu");
-                ((ToolStripMenuItem)menu.Items[0]).ShowDropDown();
+                Console.WriteLine($"Opening {fileMenu.GetType().FullName} ({fileMenu.Name}); items: {fileMenu.DropDownItems.Count}");
+                fileMenu.ShowDropDown();
                 Console.WriteLine($"File menu opened; visible: {_captureMenu.Visible}; bounds: {_captureMenu.Bounds}");
+                if (!_captureMenu.Visible)
+                    throw new InvalidOperationException("The real File menu did not open.");
                 _stage++;
             }
             else if (_stage == 2)
             {
                 if (_captureMenu == null || !_captureMenu.Visible)
                     throw new InvalidOperationException("The File menu is missing from the menu capture.");
+                if (!new Rectangle(form.Location, form.Size).Contains(_captureMenu.Bounds))
+                    throw new InvalidOperationException("The File popup extends outside the captured app window.");
                 _captureMenu.Refresh();
                 Capture(form, "02-file-menu.png");
-                _holdingMenuForCapture = false;
                 _captureMenu.Close();
                 _captureMenu.AutoClose = true;
                 ConnectionTreeWindow tree = (ConnectionTreeWindow)Window("TreeForm"); tree.Activate(); tree.ConnectionTree.Focus();

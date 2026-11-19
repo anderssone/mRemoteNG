@@ -1,5 +1,5 @@
 diff --git a/CHANGELOG.md b/CHANGELOG.md
-index 95ced2faea6862d02a6883ad867fa2c79ee3971d..41a6533b942ba64320aa1a0527e7c97bed71350a 100644
+index 95ced2faea6862d02a6883ad867fa2c79ee3971d..32c21ba63cff0f486c29557a0a04dfddeba67050 100644
 --- a/CHANGELOG.md
 +++ b/CHANGELOG.md
 @@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
@@ -8,7 +8,7 @@ index 95ced2faea6862d02a6883ad867fa2c79ee3971d..41a6533b942ba64320aa1a0527e7c97b
  ## [1.78.2]
 +### Added
 +- added an opt-in Catppuccin Mocha theme with theme-aware Fluent icons
-+- added a separate Comfortable profile with quieter Config categories, matching toolbar icons, larger text and rows, and a stacked default sidebar
++- added a separate Comfortable profile with quieter Config categories, matching toolbar icons, larger tree text and rows, compact Config text, and a stacked default sidebar
 +- added a theme-aware RDP connecting panel
 +### Fixed
 +- matched dotted connection-tree guides to the active theme border color
@@ -15662,10 +15662,10 @@ index 0000000000000000000000000000000000000000..86476f9ca71658e94b10ed32c235a989
 \ No newline at end of file
 diff --git a/mRemoteNG/Themes/FluentAppearance.cs b/mRemoteNG/Themes/FluentAppearance.cs
 new file mode 100644
-index 0000000000000000000000000000000000000000..e30c1e498e02f30322f221ef6e9d7136ee8a307f
+index 0000000000000000000000000000000000000000..5447f232cd8c66bb6ba63355621d0f4c1a30abb7
 --- /dev/null
 +++ b/mRemoteNG/Themes/FluentAppearance.cs
-@@ -0,0 +1,186 @@
+@@ -0,0 +1,209 @@
 +using System;
 +using System.Collections.Generic;
 +using System.Drawing;
@@ -15683,18 +15683,19 @@ index 0000000000000000000000000000000000000000..e30c1e498e02f30322f221ef6e9d7136
 +
 +        internal static bool Enabled(ThemeManager manager) => manager.ActiveAndExtended && manager.ActiveTheme.UseComfortableSpacing;
 +
-+        internal static Font FontFor(Control owner, Font original, bool enabled)
++        internal static Font FontFor(Control owner, Font original, bool enabled, bool compact = false)
 +        {
 +            FontState state = Fonts.GetValue(owner, control => new FontState(control, original));
-+            return enabled ? state.Comfortable : state.Original;
++            return enabled ? compact ? state.Compact : state.Comfortable : state.Original;
 +        }
 +
-+        internal static void ApplyFont(Control control, bool enabled) => control.Font = FontFor(control, control.Font, enabled);
++        internal static void ApplyFont(Control control, bool enabled, bool compact = false)
++            => control.Font = FontFor(control, control.Font, enabled, compact);
 +
 +        internal static void ApplyGrid(PropertyGrid grid, ThemeInfo theme, bool enabled)
 +        {
 +            GridState state = Grids.GetValue(grid, value => new GridState(value));
-+            ApplyFont(grid, enabled);
++            ApplyFont(grid, enabled, compact: true);
 +            if (!enabled) { state.Restore(grid); return; }
 +            ExtendedColorPalette p = theme.ExtendedPalette;
 +            // WinForms paints category rows with LineColor as well as using it
@@ -15711,10 +15712,10 @@ index 0000000000000000000000000000000000000000..e30c1e498e02f30322f221ef6e9d7136
 +        }
 +
 +        internal static void ApplyStrip(ToolStrip strip, ThemeInfo theme, bool enabled,
-+            IReadOnlyDictionary<ToolStripItem, string>? glyphs = null)
++            IReadOnlyDictionary<ToolStripItem, string>? glyphs = null, bool compact = false)
 +        {
 +            StripState state = Strips.GetValue(strip, value => new StripState(value));
-+            ApplyFont(strip, enabled);
++            ApplyFont(strip, enabled, compact);
 +            if (!enabled)
 +            {
 +                if (ReferenceEquals(strip.Renderer, state.Renderer)) strip.Renderer = state.Fallback;
@@ -15727,24 +15728,41 @@ index 0000000000000000000000000000000000000000..e30c1e498e02f30322f221ef6e9d7136
 +            state.Renderer = new FluentRenderer(theme, glyphs);
 +            strip.Renderer = state.Renderer;
 +            strip.GripStyle = ToolStripGripStyle.Hidden;
-+            strip.Padding = new Padding(4, 3, 4, 3);
++            // PropertyGrid sizes its toolbar itself. Extra vertical padding
++            // reduces the image rectangle and can squeeze a 16px icon flat.
++            int inset = Math.Max(1, (int)Math.Round((compact ? 2 : 4) * strip.DeviceDpi / 96d));
++            Padding padding = compact ? new Padding(inset, 0, inset, 0) : new Padding(inset, 3, inset, 3);
++            strip.Padding = padding;
 +            foreach (ToolStripItem item in strip.Items)
 +            {
 +                if (!state.ItemPadding.ContainsKey(item)) state.ItemPadding[item] = item.Padding;
 +                if (item is ToolStripButton || item is ToolStripDropDownButton || item is ToolStripMenuItem)
-+                    item.Padding = new Padding(4, 3, 4, 3);
++                    item.Padding = padding;
 +            }
++        }
++
++        internal static Rectangle FitImageBounds(Size image, Rectangle available)
++        {
++            if (image.Width <= 0 || image.Height <= 0 || available.Width <= 0 || available.Height <= 0)
++                return Rectangle.Empty;
++            double scale = Math.Min((double)available.Width / image.Width, (double)available.Height / image.Height);
++            int width = Math.Min(available.Width, Math.Max(1, (int)Math.Round(image.Width * scale)));
++            int height = Math.Min(available.Height, Math.Max(1, (int)Math.Round(image.Height * scale)));
++            return new Rectangle(available.X + (available.Width - width) / 2,
++                available.Y + (available.Height - height) / 2, width, height);
 +        }
 +
 +        private sealed class FontState
 +        {
 +            internal readonly Font Original;
 +            private Font? _comfortable;
++            private Font? _compact;
 +            internal Font Comfortable => _comfortable ??= new Font("Segoe UI", 9.75f, Original.Style, GraphicsUnit.Point);
++            internal Font Compact => _compact ??= new Font("Segoe UI", 8.25f, Original.Style, GraphicsUnit.Point);
 +            internal FontState(Control owner, Font original)
 +            {
 +                Original = original;
-+                owner.Disposed += (_, _) => { _comfortable?.Dispose(); _comfortable = null; };
++                owner.Disposed += (_, _) => { _comfortable?.Dispose(); _compact?.Dispose(); _comfortable = null; _compact = null; };
 +            }
 +        }
 +
@@ -15786,11 +15804,16 @@ index 0000000000000000000000000000000000000000..e30c1e498e02f30322f221ef6e9d7136
 +            {
 +                if (_glyphs != null && _glyphs.TryGetValue(e.Item, out string? key))
 +                {
-+                    int size = Math.Max(1, Math.Min(e.ImageRectangle.Width, e.ImageRectangle.Height));
++                    Rectangle bounds = FitImageBounds(new Size(1, 1), e.ImageRectangle);
++                    if (bounds.IsEmpty) return;
++                    int size = bounds.Width;
 +                    using Bitmap? image = ThemeIcons.Create(key, _theme, e.Item.Enabled, size);
-+                    if (image != null) { e.Graphics.DrawImage(image, e.ImageRectangle); return; }
++                    if (image != null) { e.Graphics.DrawImage(image, bounds); return; }
 +                }
-+                base.OnRenderItemImage(e);
++                if (e.Image == null) { base.OnRenderItemImage(e); return; }
++                Rectangle imageBounds = FitImageBounds(e.Image.Size, e.ImageRectangle);
++                if (!imageBounds.IsEmpty)
++                    base.OnRenderItemImage(new ToolStripItemImageRenderEventArgs(e.Graphics, e.Item, e.Image, imageBounds));
 +            }
 +            protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
 +            {
@@ -18362,7 +18385,7 @@ index a18a0d194b8e5636174381eae77f1b2f56a931ab..9d173230cfb4bd81abf14f4a1baa2d79
 \ No newline at end of file
 +}
 diff --git a/mRemoteNG/UI/Window/ConfigWindow.cs b/mRemoteNG/UI/Window/ConfigWindow.cs
-index c60bf3ba68ac3fbb99ebfbf4e9bb7c96362ddcef..22407d2f4f2781ec38657f756e1dbc14e739f489 100644
+index c60bf3ba68ac3fbb99ebfbf4e9bb7c96362ddcef..22f4958837be4b81b815984d474c4b12093c2e24 100644
 --- a/mRemoteNG/UI/Window/ConfigWindow.cs
 +++ b/mRemoteNG/UI/Window/ConfigWindow.cs
 @@ -2,6 +2,7 @@
@@ -18455,7 +18478,7 @@ index c60bf3ba68ac3fbb99ebfbf4e9bb7c96362ddcef..22407d2f4f2781ec38657f756e1dbc14
 +            }
 +            // Render the built-in sort images without replacing images owned by
 +            // PropertyGrid's DPI-aware ImageList.
-+            FluentAppearance.ApplyStrip(strip, manager.ActiveTheme, enabled, glyphs);
++            FluentAppearance.ApplyStrip(strip, manager.ActiveTheme, enabled, glyphs, compact: true);
          }
  
          private void UpdateTopRow()
@@ -18858,10 +18881,10 @@ index 4ebd4629d9fc7f8b7bf1d52d40331ef3e70d4438..dae036537fde352e9e7d8503a67f9f8e
    <PropertyGroup Condition="'$(Platform)'=='x64'">
 diff --git a/mRemoteNGTests/Themes/FluentAppearanceTests.cs b/mRemoteNGTests/Themes/FluentAppearanceTests.cs
 new file mode 100644
-index 0000000000000000000000000000000000000000..ce666b61f28b2decc36859bf973170621da1436e
+index 0000000000000000000000000000000000000000..833bd418ca699a6737630585896d61b5e9b132b4
 --- /dev/null
 +++ b/mRemoteNGTests/Themes/FluentAppearanceTests.cs
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,120 @@
 +using System.Collections.Generic;
 +using System.Drawing;
 +using System.Threading;
@@ -18905,12 +18928,15 @@ index 0000000000000000000000000000000000000000..ce666b61f28b2decc36859bf97317062
 +        public void GridStyle_UsesDarkCategoriesAndRestoresNativeSelection()
 +        {
 +            using PropertyGrid grid = new();
++            Font original = grid.Font;
 +            Color selected = grid.SelectedItemWithFocusBackColor, splitter = grid.CategorySplitterColor;
 +            ThemeInfo theme = Theme();
 +            FluentAppearance.ApplyGrid(grid, theme, true);
++            Assert.That(grid.Font.SizeInPoints, Is.EqualTo(8.25f));
 +            Assert.That(grid.LineColor, Is.EqualTo(theme.ExtendedPalette.getColor("List_Header_Background")));
 +            Assert.That(grid.SelectedItemWithFocusBackColor, Is.EqualTo(Color.FromArgb(49,50,68)));
 +            FluentAppearance.ApplyGrid(grid, theme, false);
++            Assert.That(grid.Font, Is.SameAs(original));
 +            Assert.That(grid.SelectedItemWithFocusBackColor, Is.EqualTo(selected));
 +            Assert.That(grid.CategorySplitterColor, Is.EqualTo(splitter));
 +        }
@@ -18940,6 +18966,42 @@ index 0000000000000000000000000000000000000000..ce666b61f28b2decc36859bf97317062
 +            ToolStripRenderer replacement = new ToolStripSystemRenderer(); strip.Renderer = replacement;
 +            FluentAppearance.ApplyStrip(strip, theme, false);
 +            Assert.That(strip.Renderer, Is.SameAs(replacement));
++        }
++
++        [Test]
++        public void CompactToolbar_LeavesRoomForNativeIconsAndRestoresOriginalSpacing()
++        {
++            using ToolStrip strip = new() { AutoSize = false, Height = 25 };
++            using Bitmap stock = new(16, 16);
++            ToolStripButton button = new() { Image = stock, Padding = new Padding(1) };
++            strip.Items.Add(button);
++            Font originalFont = strip.Font; Padding originalPadding = strip.Padding;
++            Size originalImageSize = strip.ImageScalingSize;
++            FluentAppearance.ApplyStrip(strip, Theme(), true, compact: true);
++            Assert.That(strip.Font.SizeInPoints, Is.EqualTo(8.25f));
++            Assert.That(strip.Padding.Vertical + button.Padding.Vertical, Is.Zero);
++            Assert.That(strip.Height, Is.EqualTo(25));
++            Assert.That(strip.ImageScalingSize, Is.EqualTo(originalImageSize));
++            Assert.That(button.Image, Is.SameAs(stock));
++            FluentAppearance.ApplyStrip(strip, Theme(), false, compact: true);
++            Assert.That(strip.Font, Is.SameAs(originalFont));
++            Assert.That(strip.Padding, Is.EqualTo(originalPadding));
++            Assert.That(button.Padding, Is.EqualTo(new Padding(1)));
++        }
++
++        [TestCase(16, 16, 16, 10, 10, 10)]
++        [TestCase(24, 24, 24, 15, 15, 15)]
++        [TestCase(32, 32, 32, 20, 20, 20)]
++        [TestCase(32, 16, 16, 16, 16, 8)]
++        public void IconBounds_PreserveAspectAndCenterInsideAvailableSpace(int sourceWidth, int sourceHeight,
++            int width, int height, int expectedWidth, int expectedHeight)
++        {
++            Rectangle available = new(5, 7, width, height);
++            Rectangle bounds = FluentAppearance.FitImageBounds(new Size(sourceWidth, sourceHeight), available);
++            Assert.That(bounds.Size, Is.EqualTo(new Size(expectedWidth, expectedHeight)));
++            Assert.That(available.Contains(bounds), Is.True);
++            Assert.That(bounds.X, Is.EqualTo(available.X + (width - expectedWidth) / 2));
++            Assert.That(bounds.Y, Is.EqualTo(available.Y + (height - expectedHeight) / 2));
 +        }
 +    }
 +}
