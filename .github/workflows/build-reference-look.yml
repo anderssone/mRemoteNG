@@ -46,6 +46,31 @@ jobs:
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3
         with:
           msbuild-architecture: x64
+      - name: Enable German keyboard layout for upstream RDP tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $languages = Get-WinUserLanguageList
+          if ($languages.LanguageTag -notcontains 'de-DE') {
+            $languages.Add('de-DE')
+          }
+          $german = $languages | Where-Object LanguageTag -eq 'de-DE' | Select-Object -First 1
+          if ($german.InputMethodTips -notcontains '0407:00000407') {
+            $german.InputMethodTips.Add('0407:00000407')
+          }
+          Set-WinUserLanguageList -LanguageList $languages -Force
+
+          Add-Type -AssemblyName System.Windows.Forms
+          for ($attempt = 0; $attempt -lt 10; $attempt++) {
+            $installed = [System.Windows.Forms.InputLanguage]::InstalledInputLanguages |
+              ForEach-Object { $_.Culture.Name }
+            if ($installed -contains 'de-DE' -and $installed -contains 'en-US') {
+              Write-Host "Available keyboard layouts: $($installed -join ', ')"
+              exit 0
+            }
+            Start-Sleep -Seconds 1
+          }
+          throw "The upstream RDP keyboard tests need en-US and de-DE. Available: $($installed -join ', ')"
       - name: Build the real app and run the full functional test assembly
         env:
           PREVIEW_VARIANT: ${{ matrix.variant }}
