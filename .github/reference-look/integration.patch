@@ -1,5 +1,5 @@
 diff --git a/CHANGELOG.md b/CHANGELOG.md
-index 95ced2faea6862d02a6883ad867fa2c79ee3971d..278a82cd3a1963cf3302d6a1cd1ee3dafc424de5 100644
+index 3c12b919f6f130f098e69dd92ce9e64f0e76b8a9..b9ab44d8e00a6282b723829b44e551169ad5ae15 100644
 --- a/CHANGELOG.md
 +++ b/CHANGELOG.md
 @@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
@@ -15,13 +15,10 @@ index 95ced2faea6862d02a6883ad867fa2c79ee3971d..278a82cd3a1963cf3302d6a1cd1ee3da
  - fixed app hanging on exit when PuTTY never read the password pipe; the pipe now times out and its name is no longer guessable
  - fixed the default disk drive redirection for new RDP connections coming back as "All" after a restart when "Local" or "Custom" was chosen, and an error about it in the log at every start
 diff --git a/mRemoteNG/Connection/Protocol/RDP/RdpProtocol.cs b/mRemoteNG/Connection/Protocol/RDP/RdpProtocol.cs
-index ffcb2ffc62ce85b608ab7c8f156633bcb9393266..adf038c3fb327bca767c8a0bebeaf198efad0a84 100644
+index 5b9fd8e316ad03bda1f443c7d31af4231b8e15f5..e5672edbed2a7f195175e932c719c9f05ec88bc7 100644
 --- a/mRemoteNG/Connection/Protocol/RDP/RdpProtocol.cs
 +++ b/mRemoteNG/Connection/Protocol/RDP/RdpProtocol.cs
-@@ -1,17 +1,20 @@
--﻿using AxMSTSCLib;
-+﻿﻿using AxMSTSCLib;
- using mRemoteNG.App;
+@@ -3,9 +3,11 @@ using mRemoteNG.App;
  using mRemoteNG.Messages;
  using mRemoteNG.Properties;
  using mRemoteNG.Resources.Language;
@@ -33,14 +30,15 @@ index ffcb2ffc62ce85b608ab7c8f156633bcb9393266..adf038c3fb327bca767c8a0bebeaf198
  using mRemoteNG.UI.Forms;
  using mRemoteNG.UI.Tabs;
  using mRemoteNG.Security;
- using MSTSCLib;
+@@ -13,6 +15,7 @@ using MSTSCLib;
  using System;
+ using System.Collections.Generic;
  using System.Diagnostics;
 +using System.Drawing;
  using System.IO;
  using System.Runtime.InteropServices;
  using System.Runtime.Versioning;
-@@ -34,6 +37,8 @@ namespace mRemoteNG.Connection.Protocol.RDP
+@@ -35,6 +38,8 @@ namespace mRemoteNG.Connection.Protocol.RDP
           */
  
          private MsRdpClient6NotSafeForScripting _rdpClient; // lowest version supported
@@ -49,7 +47,7 @@ index ffcb2ffc62ce85b608ab7c8f156633bcb9393266..adf038c3fb327bca767c8a0bebeaf198
          protected virtual RdpVersion RdpProtocolVersion => RDP.RdpVersion.Rdc6;
          protected ConnectionInfo connectionInfo;
          protected Version RdpVersion;
-@@ -163,10 +168,19 @@ namespace mRemoteNG.Connection.Protocol.RDP
+@@ -164,10 +169,19 @@ namespace mRemoteNG.Connection.Protocol.RDP
              connectionInfo = InterfaceControl.Info;
              Runtime.MessageCollector.AddMessage(MessageClass.DebugMsg, $"Requesting RDP version: {connectionInfo.RdpVersion}. Using: {RdpProtocolVersion}");
              Control = CreateActiveXRdpClientControl();
@@ -71,7 +69,7 @@ index ffcb2ffc62ce85b608ab7c8f156633bcb9393266..adf038c3fb327bca767c8a0bebeaf198
                  if (!InitializeActiveXControl()) return false;
  
                  RdpVersion = new Version(_rdpClient.Version);
-@@ -175,6 +189,7 @@ namespace mRemoteNG.Connection.Protocol.RDP
+@@ -176,6 +190,7 @@ namespace mRemoteNG.Connection.Protocol.RDP
  
                  SetRdpClientProperties();
  
@@ -79,7 +77,7 @@ index ffcb2ffc62ce85b608ab7c8f156633bcb9393266..adf038c3fb327bca767c8a0bebeaf198
                  return true;
              }
              catch (Exception ex)
-@@ -182,6 +197,48 @@ namespace mRemoteNG.Connection.Protocol.RDP
+@@ -183,6 +198,48 @@ namespace mRemoteNG.Connection.Protocol.RDP
                  Runtime.MessageCollector.AddExceptionStackTrace(Language.RdpSetPropsFailed, ex);
                  return false;
              }
@@ -128,7 +126,7 @@ index ffcb2ffc62ce85b608ab7c8f156633bcb9393266..adf038c3fb327bca767c8a0bebeaf198
          }
  
          private bool InitializeActiveXControl()
-@@ -228,6 +285,7 @@ namespace mRemoteNG.Connection.Protocol.RDP
+@@ -229,6 +286,7 @@ namespace mRemoteNG.Connection.Protocol.RDP
  
              try
              {
@@ -136,7 +134,7 @@ index ffcb2ffc62ce85b608ab7c8f156633bcb9393266..adf038c3fb327bca767c8a0bebeaf198
                  _rdpClient.Connect();
                  base.Connect();
  
-@@ -235,6 +293,7 @@ namespace mRemoteNG.Connection.Protocol.RDP
+@@ -236,6 +294,7 @@ namespace mRemoteNG.Connection.Protocol.RDP
              }
              catch (Exception ex)
              {
@@ -144,7 +142,7 @@ index ffcb2ffc62ce85b608ab7c8f156633bcb9393266..adf038c3fb327bca767c8a0bebeaf198
                  Runtime.MessageCollector.AddExceptionStackTrace(Language.ConnectionOpenFailed, ex);
              }
  
-@@ -256,6 +315,7 @@ namespace mRemoteNG.Connection.Protocol.RDP
+@@ -257,6 +316,7 @@ namespace mRemoteNG.Connection.Protocol.RDP
  
          public override void Close()
          {
@@ -152,7 +150,7 @@ index ffcb2ffc62ce85b608ab7c8f156633bcb9393266..adf038c3fb327bca767c8a0bebeaf198
              try
              {
                  if (_rdpClient != null)
-@@ -1046,12 +1106,15 @@ namespace mRemoteNG.Connection.Protocol.RDP
+@@ -1099,12 +1159,15 @@ namespace mRemoteNG.Connection.Protocol.RDP
  
          private void RDPEvent_OnFatalError(int errorCode)
          {
@@ -168,7 +166,7 @@ index ffcb2ffc62ce85b608ab7c8f156633bcb9393266..adf038c3fb327bca767c8a0bebeaf198
              const int UI_ERR_NORMAL_DISCONNECT = 0xB08;
              if (discReason != UI_ERR_NORMAL_DISCONNECT)
              {
-@@ -1077,11 +1140,14 @@ namespace mRemoteNG.Connection.Protocol.RDP
+@@ -1130,11 +1193,14 @@ namespace mRemoteNG.Connection.Protocol.RDP
  
          private void RDPEvent_OnConnecting()
          {
@@ -11058,7 +11056,7 @@ index f98e42f7dd8c94ba4a1ad34f45ac7ee203e48c88..766921a4ce5b9c69dc0dfb9f959c328e
 \ No newline at end of file
 +}
 diff --git a/mRemoteNG/UI/Tabs/DockPaneStripNG.cs b/mRemoteNG/UI/Tabs/DockPaneStripNG.cs
-index a18a0d194b8e5636174381eae77f1b2f56a931ab..9d173230cfb4bd81abf14f4a1baa2d79f80778d4 100644
+index fe553e69ab312f5411f8c04a6c8f16ef3e8cd011..887a3b81c5cb7a42a9c9e6278ede98c5b99e7814 100644
 --- a/mRemoteNG/UI/Tabs/DockPaneStripNG.cs
 +++ b/mRemoteNG/UI/Tabs/DockPaneStripNG.cs
 @@ -190,7 +190,9 @@ namespace mRemoteNG.UI.Tabs
@@ -11072,7 +11070,7 @@ index a18a0d194b8e5636174381eae77f1b2f56a931ab..9d173230cfb4bd81abf14f4a1baa2d79
  
          private Font DocumentTextFont
          {
-@@ -1633,4 +1635,4 @@ namespace mRemoteNG.UI.Tabs
+@@ -1701,4 +1703,4 @@ namespace mRemoteNG.UI.Tabs
  
          #endregion
      }
@@ -11384,10 +11382,10 @@ index 34a2dc995965d0c5a830ebac5ebaab05981da4aa..1934ea71e423529e55b14432ff6e3ba9
                  }
              };
 diff --git a/mRemoteNG/UI/Window/ConnectionWindow.Designer.cs b/mRemoteNG/UI/Window/ConnectionWindow.Designer.cs
-index 097759a14cf8347de82de57a6e82fd3d57e4e979..b32bc6c4804c032cb43043a3ed550b8fcd7b435d 100644
+index 2b22d419ba02b1d2c727a156c428a23f839c249d..8eff792bbd9ee0f8a70de0917da807d9b9aad373 100644
 --- a/mRemoteNG/UI/Window/ConnectionWindow.Designer.cs
 +++ b/mRemoteNG/UI/Window/ConnectionWindow.Designer.cs
-@@ -104,7 +104,7 @@ namespace mRemoteNG.UI.Window
+@@ -107,7 +107,7 @@ namespace mRemoteNG.UI.Window
              // 
              // cmenTabDisconnect
              // 
@@ -11396,7 +11394,7 @@ index 097759a14cf8347de82de57a6e82fd3d57e4e979..b32bc6c4804c032cb43043a3ed550b8f
              this.cmenTabDisconnect.Name = "cmenTabDisconnect";
              this.cmenTabDisconnect.Size = new System.Drawing.Size(230, 22);
              this.cmenTabDisconnect.Text = "Disconnect";
-@@ -118,28 +118,28 @@ namespace mRemoteNG.UI.Window
+@@ -127,28 +127,28 @@ namespace mRemoteNG.UI.Window
              // 
              // cmenTabDisconnectOthers
              // 
@@ -11429,7 +11427,7 @@ index 097759a14cf8347de82de57a6e82fd3d57e4e979..b32bc6c4804c032cb43043a3ed550b8f
              this.cmenTabDuplicateTab.Name = "cmenTabDuplicateTab";
              this.cmenTabDuplicateTab.Size = new System.Drawing.Size(230, 22);
              this.cmenTabDuplicateTab.Text = "Duplicate Tab";
-@@ -151,7 +151,7 @@ namespace mRemoteNG.UI.Window
+@@ -160,7 +160,7 @@ namespace mRemoteNG.UI.Window
              // 
              // cmenTabFullscreen
              // 
@@ -11438,7 +11436,7 @@ index 097759a14cf8347de82de57a6e82fd3d57e4e979..b32bc6c4804c032cb43043a3ed550b8f
              this.cmenTabFullscreen.Name = "cmenTabFullscreen";
              this.cmenTabFullscreen.Size = new System.Drawing.Size(230, 22);
              this.cmenTabFullscreen.Text = "Fullscreen (RDP)";
-@@ -165,7 +165,7 @@ namespace mRemoteNG.UI.Window
+@@ -174,7 +174,7 @@ namespace mRemoteNG.UI.Window
              // 
              // cmenTabViewOnly
              // 
@@ -11447,7 +11445,7 @@ index 097759a14cf8347de82de57a6e82fd3d57e4e979..b32bc6c4804c032cb43043a3ed550b8f
              this.cmenTabViewOnly.Name = "cmenTabViewOnly";
              this.cmenTabViewOnly.Size = new System.Drawing.Size(230, 22);
              this.cmenTabViewOnly.Text = "View Only (VNC)";
-@@ -180,7 +180,7 @@ namespace mRemoteNG.UI.Window
+@@ -189,7 +189,7 @@ namespace mRemoteNG.UI.Window
              // 
              // cmenTabRefreshScreen
              // 
@@ -11457,10 +11455,10 @@ index 097759a14cf8347de82de57a6e82fd3d57e4e979..b32bc6c4804c032cb43043a3ed550b8f
              this.cmenTabRefreshScreen.Size = new System.Drawing.Size(230, 22);
              this.cmenTabRefreshScreen.Text = "Refresh Screen (VNC)";
 diff --git a/mRemoteNG/UI/Window/ConnectionWindow.cs b/mRemoteNG/UI/Window/ConnectionWindow.cs
-index 493776e78a1c612d2eb03c22e6e48ec1e80fc3df..ae4bf17b8be9fdf9dfdd8d1fd693f468a74bf0c3 100644
+index d30ec04b2ca62dad51d5d284dcbd86d72bb0efa6..06de0d462cadbde187aa52498e2af151692004d6 100644
 --- a/mRemoteNG/UI/Window/ConnectionWindow.cs
 +++ b/mRemoteNG/UI/Window/ConnectionWindow.cs
-@@ -143,10 +143,10 @@ namespace mRemoteNG.UI.Window
+@@ -144,10 +144,10 @@ namespace mRemoteNG.UI.Window
                  {
                      Tag = connectionInfo,
                      DockAreas = DockAreas.Document | DockAreas.Float,

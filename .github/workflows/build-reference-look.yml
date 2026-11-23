@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 env:
-  BASE_COMMIT: 059464f050124e497c9103c255dce0560537106a
+  BASE_COMMIT: 0ba3873bfedc6cea7f8afb4dc9411bc2e34874a7
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
   DOTNET_NOLOGO: '1'
 
