@@ -27,7 +27,7 @@ using WeifenLuo.WinFormsUI.Docking;
 internal static class Program
 {
     private static string _output = "";
-    private static string _theme = "Catppuccin Mocha Comfortable";
+    private static string _theme = "Catppuccin Mocha";
     private static bool _disabled;
     private static bool _finished;
     private static Exception? _failure;
@@ -79,7 +79,7 @@ internal static class Program
             Thread.CurrentThread.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
             Set("OptionsThemePage", "ThemeName", _theme);
             Set("OptionsThemePage", "ThemingActive", !_disabled);
-            Set("OptionsThemePage", "IsActiveThemeDark", _theme == "Catppuccin Mocha Comfortable");
+            Set("OptionsThemePage", "IsActiveThemeDark", _theme == "Catppuccin Mocha");
             Set("OptionsAdvancedPage", "UseUserProfiles", false);
             Set("OptionsAdvancedPage", "NoReconnect", true);
             Set("OptionsStartupExitPage", "SingleInstance", false);
@@ -290,7 +290,7 @@ internal static class Program
     private static void Capture(Form form, string name)
     {
         ThemeManager manager = ThemeManager.getInstance();
-        if (manager.ThemingActive != !_disabled || manager.ActiveTheme.UseFluentIcons != (!_disabled && _theme == "Catppuccin Mocha Comfortable"))
+        if (manager.ThemingActive != !_disabled || manager.ActiveTheme.UseFluentIcons != (!_disabled && _theme == "Catppuccin Mocha"))
             throw new InvalidOperationException("The actual theme state does not match the requested capture mode.");
         // The ordinary UI loop has already painted between stages. Pumping
         // another message loop here can re-enter timer/menu processing.

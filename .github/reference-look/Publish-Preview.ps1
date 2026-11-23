@@ -70,13 +70,13 @@ try {
             '/p:SelfContained=true','/p:PublishReadyToRun=false','/p:MSBuildEnableWorkloadResolver=false',
             "/p:PublishDir=$PublishRoot/",'/verbosity:minimal','/nologo') (Join-Path $results 'portable-publish.log')
     }
-    foreach ($required in @('mRemoteNG.exe','mRemoteNG.dll','Themes/Catppuccin Mocha Comfortable.vstheme','Icons/mRemoteNG.ico')) {
+    foreach ($required in @('mRemoteNG.exe','mRemoteNG.dll','Themes/Catppuccin Mocha.vstheme','Icons/mRemoteNG.ico')) {
         if (-not (Test-Path -LiteralPath (Join-Path $PublishRoot $required))) { throw "Portable output is missing $required" }
     }
     $previewRecord.portablePublished = $true
     @'
 Portable appearance preview: extract this entire artifact into a NEW writable folder.
-Run mRemoteNG.exe. Select Catppuccin Mocha Comfortable in Options > Themes and
+Run mRemoteNG.exe. Select Catppuccin Mocha in Options > Themes and
 restart once so native Windows controls start in the matching dark mode.
 This is an unsigned local test build, not a maintainer-signed release. The app was
 compiled with upstream's PORTABLE configuration; use this separate folder and an
