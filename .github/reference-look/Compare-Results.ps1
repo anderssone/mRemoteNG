@@ -81,7 +81,7 @@ foreach ($variant in @('baseline', 'appearance')) {
             foreach ($fixture in @(
                 @{ name = 'RdpConnectingPanelTests'; count = 9 },
                 @{ name = 'ThemeIconsTests'; count = 14 },
-                @{ name = 'FluentThemeMetadataTests'; count = 4 },
+                @{ name = 'FluentThemeMetadataTests'; count = 5 },
                 @{ name = 'FluentConnectionIconTests'; count = 1 },
                 @{ name = 'FluentAppearanceTests'; count = 9 }
             )) {

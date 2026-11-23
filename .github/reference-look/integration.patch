@@ -15904,7 +15904,7 @@ index 0000000000000000000000000000000000000000..bc9c36b28f467f7006c4e5f1be4ca0a1
 +SOFTWARE.
 diff --git a/mRemoteNG/Themes/FluentIcons/README.md b/mRemoteNG/Themes/FluentIcons/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..d71481044944e80dd5b159905f0f5b8b1cf33545
+index 0000000000000000000000000000000000000000..3a6a253bd29126cad62a49f1e084ad6472dc2b9b
 --- /dev/null
 +++ b/mRemoteNG/Themes/FluentIcons/README.md
 @@ -0,0 +1,16 @@
@@ -15915,7 +15915,7 @@ index 0000000000000000000000000000000000000000..d71481044944e80dd5b159905f0f5b8b
 +Pinned revision: 41089846ad80c5749df505aef35a68712c1561b9
 +License: MIT; see LICENSE.txt. Per-icon source URLs are in sources.json.
 +
-+icons.zip contains transparent PNG masks at 16 and 48 pixels for 30 regular
++icons.zip contains transparent PNG masks at 16 and 48 pixels for 36 regular
 +outline glyphs. They were rasterized from the pinned 16-pixel SVG geometry
 +with 4x supersampling. ThemeIcons resizes their alpha coverage and applies
 +IconColor or IconDisabledColor at runtime. It does not edit shared resources.
@@ -15926,9 +15926,9 @@ index 0000000000000000000000000000000000000000..d71481044944e80dd5b159905f0f5b8b
 +and the green connected-status overlay retain their original appearance.
 diff --git a/mRemoteNG/Themes/FluentIcons/icons.zip b/mRemoteNG/Themes/FluentIcons/icons.zip
 new file mode 100644
-index 0000000000000000000000000000000000000000..d8f3bcace2b7bae5f9233950b2b1395559ed7d35
+index 0000000000000000000000000000000000000000..94f2592f756f9d9654ae6e8193ab5c54faecfdb6
 GIT binary patch
-literal 61872
+literal 74252
 zcmcGWbx>W~v*)n@!QGwU?(XjH?(Xhz2o6DmyE_4bySoJl?gW?M4s-6kx$}E(>Sd~?
 zYVyaIQ~R7#1+4z8?q1!!x1tO<1R4kk2sB8ArIQ}a4olVw@aj8Ih(Iy1GnhEo+8Q~!
 zn9)1hTY!ECp?Zr@l$U^q!GQsO3@;@qstkNZ`b*G|z@LOyZ$`iuP#0whVUX%cyhGpx
@@ -16902,54 +16902,260 @@ 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
-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
+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
 
 literal 0
 HcmV?d00001
 
 diff --git a/mRemoteNG/Themes/FluentIcons/sources.json b/mRemoteNG/Themes/FluentIcons/sources.json
 new file mode 100644
-index 0000000000000000000000000000000000000000..1ef0abd1f2f4877254ab00d85bddf174b67f3695
+index 0000000000000000000000000000000000000000..a7ec1169b3d5779fd9d04818e196af52053830d1
 --- /dev/null
 +++ b/mRemoteNG/Themes/FluentIcons/sources.json
-@@ -0,0 +1,156 @@
+@@ -0,0 +1,186 @@
 +{
 +  "repository": "https://github.com/microsoft/fluentui-system-icons",
 +  "commit": "41089846ad80c5749df505aef35a68712c1561b9",
@@ -17103,15 +17309,45 @@ index 0000000000000000000000000000000000000000..1ef0abd1f2f4877254ab00d85bddf174
 +      "name": "properties",
 +      "source": "https://raw.githubusercontent.com/microsoft/fluentui-system-icons/41089846ad80c5749df505aef35a68712c1561b9/assets/Text%20Align%20Left/SVG/ic_fluent_text_align_left_16_regular.svg",
 +      "size": 16
++    },
++    {
++      "name": "alert",
++      "source": "https://raw.githubusercontent.com/microsoft/fluentui-system-icons/41089846ad80c5749df505aef35a68712c1561b9/assets/Alert/SVG/ic_fluent_alert_16_regular.svg",
++      "size": 16
++    },
++    {
++      "name": "database",
++      "source": "https://raw.githubusercontent.com/microsoft/fluentui-system-icons/41089846ad80c5749df505aef35a68712c1561b9/assets/Database/SVG/ic_fluent_database_16_regular.svg",
++      "size": 16
++    },
++    {
++      "name": "key",
++      "source": "https://raw.githubusercontent.com/microsoft/fluentui-system-icons/41089846ad80c5749df505aef35a68712c1561b9/assets/Key/SVG/ic_fluent_key_16_regular.svg",
++      "size": 16
++    },
++    {
++      "name": "lock_closed",
++      "source": "https://raw.githubusercontent.com/microsoft/fluentui-system-icons/41089846ad80c5749df505aef35a68712c1561b9/assets/Lock%20Closed/SVG/ic_fluent_lock_closed_16_regular.svg",
++      "size": 16
++    },
++    {
++      "name": "paint_brush",
++      "source": "https://raw.githubusercontent.com/microsoft/fluentui-system-icons/41089846ad80c5749df505aef35a68712c1561b9/assets/Paint%20Brush/SVG/ic_fluent_paint_brush_16_regular.svg",
++      "size": 16
++    },
++    {
++      "name": "puzzle_piece",
++      "source": "https://raw.githubusercontent.com/microsoft/fluentui-system-icons/41089846ad80c5749df505aef35a68712c1561b9/assets/Puzzle%20Piece/SVG/ic_fluent_puzzle_piece_16_regular.svg",
++      "size": 16
 +    }
 +  ]
 +}
 diff --git a/mRemoteNG/Themes/ThemeIcons.cs b/mRemoteNG/Themes/ThemeIcons.cs
 new file mode 100644
-index 0000000000000000000000000000000000000000..616a99b88d4d0a5c355c71c3933437562069b9b0
+index 0000000000000000000000000000000000000000..c286454847806412fd08564d018794605cf503a5
 --- /dev/null
 +++ b/mRemoteNG/Themes/ThemeIcons.cs
-@@ -0,0 +1,293 @@
+@@ -0,0 +1,297 @@
 +using System;
 +using System.Collections.Generic;
 +using System.Drawing;
@@ -17143,7 +17379,11 @@ index 0000000000000000000000000000000000000000..616a99b88d4d0a5c355c71c393343756
 +            ["Property_16x"] = "settings", ["ExtendedProperty_16x"] = "properties", ["ViewDownBySchema_16x"] = "inheritance",
 +            ["Panel_16x"] = "panel", ["InsertPanel_16x"] = "panel-add", ["FullScreen_16x"] = "fullscreen",
 +            ["F1Help_16x"] = "help", ["UIAboutBox_16x"] = "info", ["RunUpdate_16x"] = "update",
-+            ["Console_16x"] = "terminal", ["CloseSolution_16x"] = "disconnect"
++            ["Console_16x"] = "terminal", ["CloseSolution_16x"] = "disconnect",
++            ["Tab_16x"] = "panel-add", ["LogError_16x"] = "alert",
++            ["Key_16x"] = "key", ["SQLDatabase_16x"] = "database", ["Lock_16x"] = "lock_closed",
++            ["AppearanceEditor_16x"] = "paint_brush", ["OptionsPlugins"] = "puzzle_piece",
++            ["DocumentsFolder_16x"] = "folder"
 +        };
 +        private static readonly ConditionalWeakTable<object, Binding> Bindings = new();
 +        private static readonly List<WeakReference<Binding>> LiveBindings = [];
@@ -18012,6 +18252,53 @@ index 89a2b1143c4fb00c46f1f0d11114eb54485bce66..16254619db2e629fb512f9d0ee3de19f
              imgConnectionStatus.Location = new System.Drawing.Point(12, 113);
              imgConnectionStatus.Name = "imgConnectionStatus";
              imgConnectionStatus.Size = new System.Drawing.Size(16, 16);
+diff --git a/mRemoteNG/UI/Forms/OptionsPages/ThemePage.cs b/mRemoteNG/UI/Forms/OptionsPages/ThemePage.cs
+index 6757dbedd1f2a53fbbd25022f2cf070290af7ba3..1894e6d408cf28341df18b5f97e895f7153dd7a8 100644
+--- a/mRemoteNG/UI/Forms/OptionsPages/ThemePage.cs
++++ b/mRemoteNG/UI/Forms/OptionsPages/ThemePage.cs
+@@ -4,6 +4,7 @@ using System.Windows.Forms;
+ using mRemoteNG.Themes;
+ using System.Linq;
+ using System.Collections.Generic;
++using System.Globalization;
+ using BrightIdeasSoftware;
+ using mRemoteNG.Properties;
+ using mRemoteNG.UI.TaskDialog;
+@@ -201,7 +202,7 @@ namespace mRemoteNG.UI.Forms.OptionsPages
+         {
+             foreach (KeyValuePair<string, System.Drawing.Color> colorElem in ti.ExtendedPalette.ExtColorPalette)
+             {
+-                string display = ColorKeyDisplayName(colorElem.Key);
++                string display = ColorKeyDisplayName(colorElem.Key, Language.Culture ?? CultureInfo.CurrentUICulture);
+                 listPalette.AddObject(new PseudoKeyColor(colorElem.Key, colorElem.Value, display));
+             }
+         }
+@@ -211,9 +212,16 @@ namespace mRemoteNG.UI.Forms.OptionsPages
+         /// localized, human-readable label shown in the theme color list.
+         /// Falls back to the raw key when no mapping is defined.
+         /// </summary>
+-        private static string ColorKeyDisplayName(string key)
++        internal static string ColorKeyDisplayName(string key, CultureInfo culture)
+         {
+-            return ColorKeyJaMap.TryGetValue(key, out var jp) ? jp : key;
++            if (!ColorKeyJaMap.TryGetValue(key, out string japaneseLabel))
++                return key;
++            if (culture.TwoLetterISOLanguageName == "ja")
++                return japaneseLabel;
++
++            int separator = key.LastIndexOf('_');
++            if (separator < 0) return key;
++            return key[..separator].Replace('_', ' ') + ": " + key[(separator + 1)..];
+         }
+ 
+         // Japanese display labels for the palette keys defined in
+@@ -371,4 +379,4 @@ namespace mRemoteNG.UI.Forms.OptionsPages
+ 
+         #endregion
+     }
+-}
+\ No newline at end of file
++}
 diff --git a/mRemoteNG/UI/Forms/frmChoosePanel.Designer.cs b/mRemoteNG/UI/Forms/frmChoosePanel.Designer.cs
 index 4f6b341eccf13153a4e8f46df0aca32cc635ff2d..b19346afe49badd412400dda4874b31a6e777d0e 100644
 --- a/mRemoteNG/UI/Forms/frmChoosePanel.Designer.cs
@@ -18102,6 +18389,125 @@ index de8ec0beb086d46f671c366fadcaa70e387a5379..6a36b8e7267db6b61f9c1528b206a1c0
                  viewMenu._mMenViewQuickConnectToolbar.Checked = true;
 @@ -1068,4 +1089,4 @@ namespace mRemoteNG.UI.Forms
              Properties.OptionsRbac.Default.ActiveRole = "AdminRole";
+         }
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/mRemoteNG/UI/Forms/frmOptions.Designer.cs b/mRemoteNG/UI/Forms/frmOptions.Designer.cs
+index dab3a306ed34495a0018195d5bb30519fb1697f4..c6f36f0347bfc8e5e8868fba31ac04826d9ca6b7 100644
+--- a/mRemoteNG/UI/Forms/frmOptions.Designer.cs
++++ b/mRemoteNG/UI/Forms/frmOptions.Designer.cs
+@@ -28,6 +28,11 @@ namespace mRemoteNG.UI.Forms
+                 components?.Dispose();
+             }
+             base.Dispose(disposing);
++            if (disposing)
++            {
++                foreach (var image in _pageImages.Values) image.Dispose();
++                _pageImages.Clear();
++            }
+         }
+ 
+         #region Windows Form Designer generated code
+@@ -196,4 +201,4 @@ namespace mRemoteNG.UI.Forms
+         private BrightIdeasSoftware.OLVColumn PageName;
+         private MrngButton btnApply;
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/mRemoteNG/UI/Forms/frmOptions.cs b/mRemoteNG/UI/Forms/frmOptions.cs
+index 56a8888fc57b0c88bd8fb7b4b1d7367f2a51ebec..73f29ad5939bd2ab929d0f3dd5181e6cf9f5e39d 100644
+--- a/mRemoteNG/UI/Forms/frmOptions.cs
++++ b/mRemoteNG/UI/Forms/frmOptions.cs
+@@ -4,6 +4,7 @@ using mRemoteNG.UI.Forms.OptionsPages;
+ using System;
+ using System.Collections.Generic;
+ using System.Diagnostics;
++using System.Drawing;
+ using System.Linq;
+ using System.Windows.Forms;
+ using mRemoteNG.Themes;
+@@ -21,6 +22,7 @@ namespace mRemoteNG.UI.Forms
+         private readonly List<OptionsPage> _optionPages = [];
+         private string _pageName;
+         private readonly DisplayProperties _display = new();
++        private Dictionary<OptionsPage, Bitmap> _pageImages = [];
+         private readonly List<string> _optionPageObjectNames;
+         private bool _isLoading = true;
+         private bool _isInitialized = false;
+@@ -100,6 +102,8 @@ namespace mRemoteNG.UI.Forms
+             btnCancel.Text = Language._Cancel;
+             btnApply.Text = Language.Apply;
+             ApplyTheme();
++            ThemeManager.getInstance().ThemeChanged += ApplyTheme;
++            lstOptionPages.DpiChangedAfterParent += (_, _) => RefreshPageImages();
+             lstOptionPages.SelectedIndexChanged += LstOptionPages_SelectedIndexChanged;
+             lstOptionPages.SelectedIndex = 0;
+             Logger.Instance.Log?.Debug($"[FrmOptions_Load] Selected index set to 0");
+@@ -130,6 +134,7 @@ namespace mRemoteNG.UI.Forms
+ 
+         private void ApplyTheme()
+         {
++            RefreshPageImages();
+             if (!ThemeManager.getInstance().ActiveAndExtended) return;
+             BackColor = ThemeManager.getInstance().ActiveTheme.ExtendedPalette.getColor("Dialog_Background");
+             ForeColor = ThemeManager.getInstance().ActiveTheme.ExtendedPalette.getColor("Dialog_Foreground");
+@@ -325,8 +330,49 @@ namespace mRemoteNG.UI.Forms
+ 
+         private object ImageGetter(object rowobject)
+         {
+-            OptionsPage page = rowobject as OptionsPage;
+-            return page?.PageIcon == null ? _display.ScaleImage(Properties.Resources.F1Help_16x) : _display.ScaleImage(page.PageIcon);
++            if (rowobject is not OptionsPage page) return null!;
++            if (_pageImages.TryGetValue(page, out Bitmap? cached)) return cached;
++
++            ThemeManager manager = ThemeManager.getInstance();
++            Bitmap? image = null;
++            if (manager.ActiveAndExtended)
++            {
++                string glyph = page switch
++                {
++                    StartupExitPage => "Run_16x",
++                    AppearancePage => "Panel_16x",
++                    ConnectionsPage => "Monitor_16x",
++                    TabsPanelsPage => "Tab_16x",
++                    NotificationsPage => "LogError_16x",
++                    CredentialsPage => "Key_16x",
++                    SqlServerPage => "SQLDatabase_16x",
++                    UpdatesPage => "RunUpdate_16x",
++                    ThemePage => "AppearanceEditor_16x",
++                    SecurityPage => "Lock_16x",
++                    PluginsPage => "OptionsPlugins",
++                    AdvancedPage => "Settings_16x",
++                    BackupPage => "DocumentsFolder_16x",
++                    _ => "Settings_16x"
++                };
++                int size = Math.Clamp((int)Math.Round(16 * lstOptionPages.DeviceDpi / 96d), 1, 256);
++                image = ThemeIcons.Create(glyph, manager.ActiveTheme, true, size);
++            }
++            if (image == null)
++            {
++                using Bitmap? stock = page.PageIcon?.ToBitmap();
++                image = _display.ScaleImage(stock ?? Properties.Resources.F1Help_16x);
++            }
++            _pageImages.Add(page, image);
++            return image;
++        }
++
++        private void RefreshPageImages()
++        {
++            if (Disposing || IsDisposed || _pageImages.Count == 0) return;
++            var previous = _pageImages;
++            _pageImages = [];
++            lstOptionPages.RefreshObjects(_optionPages);
++            foreach (Bitmap image in previous.Values) image.Dispose();
+         }
+ 
+         public void SetActivatedPage(string? pageName = default)
+@@ -572,4 +618,4 @@ namespace mRemoteNG.UI.Forms
+             }
          }
      }
 -}
@@ -19043,14 +19449,16 @@ index 0000000000000000000000000000000000000000..ee7ee8b47e8ebe1719164fdced8f9aa0
 +}
 diff --git a/mRemoteNGTests/Themes/FluentThemeMetadataTests.cs b/mRemoteNGTests/Themes/FluentThemeMetadataTests.cs
 new file mode 100644
-index 0000000000000000000000000000000000000000..a44b631cf750111ff30a7c754dc5b0e5247e6438
+index 0000000000000000000000000000000000000000..0fb49b94f26df6f783f962e340e0d119cca35bd3
 --- /dev/null
 +++ b/mRemoteNGTests/Themes/FluentThemeMetadataTests.cs
-@@ -0,0 +1,79 @@
+@@ -0,0 +1,91 @@
 +using System;
 +using System.Drawing;
++using System.Globalization;
 +using System.IO;
 +using mRemoteNG.Themes;
++using mRemoteNG.UI.Forms.OptionsPages;
 +using NUnit.Framework;
 +
 +namespace mRemoteNGTests.Themes
@@ -19059,6 +19467,16 @@ index 0000000000000000000000000000000000000000..a44b631cf750111ff30a7c754dc5b0e5
 +    public class FluentThemeMetadataTests
 +    {
 +        private static string ThemePath => Path.Combine(TestContext.CurrentContext.TestDirectory, "Themes", "Catppuccin Mocha Comfortable.vstheme");
++
++        [Test]
++        public void PaletteLabels_UseJapaneseOnlyForJapaneseUi()
++        {
++            const string key = "Dialog_Foreground";
++            Assert.That(ThemePage.ColorKeyDisplayName(key, CultureInfo.GetCultureInfo("en-US")), Is.EqualTo("Dialog: Foreground"));
++            Assert.That(ThemePage.ColorKeyDisplayName(key, CultureInfo.GetCultureInfo("sv-SE")), Is.EqualTo("Dialog: Foreground"));
++            Assert.That(ThemePage.ColorKeyDisplayName(key, CultureInfo.GetCultureInfo("ja-JP")), Is.EqualTo("ダイアログ: 文字"));
++            Assert.That(ThemePage.ColorKeyDisplayName("Custom_Unknown_Key", CultureInfo.GetCultureInfo("en-US")), Is.EqualTo("Custom_Unknown_Key"));
++        }
 +
 +        [Test]
 +        public void BundledProfile_LoadsFluentStyleAndExactMochaTints()
@@ -19128,10 +19546,10 @@ index 0000000000000000000000000000000000000000..a44b631cf750111ff30a7c754dc5b0e5
 +}
 diff --git a/mRemoteNGTests/Themes/ThemeIconsTests.cs b/mRemoteNGTests/Themes/ThemeIconsTests.cs
 new file mode 100644
-index 0000000000000000000000000000000000000000..069a4cf389ecdda942b76ce3a743e8beca86fefc
+index 0000000000000000000000000000000000000000..3af39497934e25cab2891d5908fbe87ee81f56a5
 --- /dev/null
 +++ b/mRemoteNGTests/Themes/ThemeIconsTests.cs
-@@ -0,0 +1,163 @@
+@@ -0,0 +1,165 @@
 +using System;
 +using System.Drawing;
 +using System.Threading;
@@ -19290,7 +19708,9 @@ index 0000000000000000000000000000000000000000..069a4cf389ecdda942b76ce3a743e8be
 +                "Run_16x", "Stop_16x", "Search_16x", "Save_16x", "Settings_16x", "Refresh_16x", "Favorite_16x",
 +                "Copy_16x", "Close_16x", "DefaultConnection", "Rename_16x", "SortAscending_16x", "SortDescending_16x",
 +                "Schema_16x", "Property_16x", "ExtendedProperty_16x", "ViewDownBySchema_16x",
-+                "Panel_16x", "InsertPanel_16x", "FullScreen_16x", "F1Help_16x", "UIAboutBox_16x", "RunUpdate_16x", "Console_16x" };
++                "Panel_16x", "InsertPanel_16x", "FullScreen_16x", "F1Help_16x", "UIAboutBox_16x", "RunUpdate_16x", "Console_16x",
++                "Monitor_16x", "Tab_16x", "LogError_16x", "Key_16x", "SQLDatabase_16x", "Lock_16x",
++                "AppearanceEditor_16x", "OptionsPlugins", "DocumentsFolder_16x" };
 +            foreach (string key in keys) { using Bitmap icon = ThemeIcons.Create(key, _manager.ActiveTheme, true, 32); Assert.That(icon, Is.Not.Null, key); }
 +        }
 +    }
